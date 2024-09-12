@@ -42,7 +42,6 @@ namespace Scriptor
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             m_window = new MainWindow();
-            m_window.AppWindow.Resize(new Windows.Graphics.SizeInt32(800, 400));
             m_window.Activate();
         }
 

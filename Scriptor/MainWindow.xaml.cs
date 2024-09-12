@@ -23,14 +23,42 @@ namespace Scriptor
     /// </summary>
     public sealed partial class MainWindow : Window
     {
+        private bool isRecording;
+
         public MainWindow()
         {
+            this.AppWindow.Resize(new Windows.Graphics.SizeInt32(800, 400));
+            this.TrySetMicaBackdrop();
+            this.ExtendsContentIntoTitleBar = true;
+
             this.InitializeComponent();
         }
 
-        private void myButton_Click(object sender, RoutedEventArgs e)
+        private void MicrophoneButton_Click(object sender, RoutedEventArgs e)
         {
-            myButton.Content = "Clicked";
+            if (!isRecording)
+            {
+                ButtonIcon.Glyph = "\uE711"; // Stop sign icon
+            }
+            else
+            {
+                ButtonIcon.Glyph = "\uE720"; // Microphone icon
+            }
+            this.isRecording = !this.isRecording;
+        }
+
+        private bool TrySetMicaBackdrop()
+        {
+            if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
+            {
+                Microsoft.UI.Xaml.Media.MicaBackdrop micaBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+                micaBackdrop.Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.Base;
+                this.SystemBackdrop = micaBackdrop;
+
+                return true; // Succeeded.
+            }
+
+            return false; // Mica is not supported on this system.
         }
     }
 }
