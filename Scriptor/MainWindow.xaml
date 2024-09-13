@@ -5,14 +5,29 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Scriptor"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:foundation="using:Windows.Foundation"
     mc:Ignorable="d">
-
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <!--<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
         <Button x:Name="MicrophoneButton" Width="100" Height="100" Click="MicrophoneButton_Click">
             <Button.Content>
                 <FontIcon x:Name="ButtonIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="36" />
             </Button.Content>
         </Button>
-    </StackPanel>
+        <Ellipse x:Name="RecordingIndicator" Width="100" Height="100" Fill="Red" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Ellipse.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                            <DoubleAnimation Storyboard.TargetName="RecordingIndicator" Storyboard.TargetProperty="Width" From="100" To="120" Duration="0:0:0.5"/>
+                            <DoubleAnimation Storyboard.TargetName="RecordingIndicator" Storyboard.TargetProperty="Height" From="100" To="120" Duration="0:0:0.5"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Ellipse.Triggers>
+        </Ellipse>
+    </StackPanel>-->
+    <Grid>
+        <!--<Polyline x:Name="VoicePolyline" Stroke="Blue" StrokeThickness="2" Points="0,100 50,50 100,100 150,150 200,100"/>-->
+        <Image x:Name="LocalGifImage" Width="200" Height="200"/>
+    </Grid>
 </Window>
