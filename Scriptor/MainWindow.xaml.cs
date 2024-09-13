@@ -15,6 +15,9 @@ using Windows.Foundation.Collections;
 using Microsoft.UI.Xaml.Media.Animation;
 using System.Timers;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Hosting;
+using Microsoft.UI.Composition;
+using Windows.UI.Xaml;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -30,6 +33,10 @@ namespace Scriptor
         //private Timer _timer;
         //private Random _random;
 
+        private Compositor _compositor;
+        private Visual _buttonVisual;
+        private DispatcherTimer _animationTimer;
+
         public MainWindow()
         {
             this.AppWindow.Resize(new Windows.Graphics.SizeInt32(800, 400));
@@ -38,44 +45,50 @@ namespace Scriptor
 
             this.InitializeComponent();
 
-            //BitmapImage bitmapImage = new BitmapImage(new Uri("ms-appx:///Assets/recording.gif"));
-            //LocalGifImage.Source = bitmapImage;
+            // Get the compositor
+            _compositor = this.Compositor;
+            _buttonVisual = ElementCompositionPreview.GetElementVisual(MicrophoneButton);
+            // Initialize the timer
+            _animationTimer = new DispatcherTimer();
+            _animationTimer.Tick += AnimationTimer_Tick;
 
-            //_random = new Random();
-            //_timer = new Timer(500); // Update every 500ms
-            //_timer.Elapsed += OnTimerElapsed;
-            //_timer.Start();
+            BitmapImage bitmapImage = new BitmapImage(new Uri("ms-appx:///Assets/recording.gif"));
+            LocalGifImage.Source = bitmapImage;
         }
-        //private void OnTimerElapsed(object sender, ElapsedEventArgs e)
-        //{
-        //    DispatcherQueue.TryEnqueue(() =>
-        //    {
-        //        var points = VoicePolyline.Points.ToList();
-        //        for (int i = 0; i < points.Count; i++)
-        //        {
-        //            points[i] = new Point(points[i].X, _random.Next(50, 150));
-        //        }
-        //        VoicePolyline.Points.Clear();
-        //        foreach (var point in points)
-        //        {
-        //            VoicePolyline.Points.Add(point);
-        //        }
-        //    });
-        //}
 
-        //private void MicrophoneButton_Click(object sender, RoutedEventArgs e)
-        //{
-        //    if (!isRecording)
-        //    {
-        //        ButtonIcon.Glyph = "\uE711"; // Stop sign icon
-        //    }
-        //    else
-        //    {
-        //        ButtonIcon.Glyph = "\uE720"; // Microphone icon
-        //    }
-        //    this.isRecording = !this.isRecording;
-        //}
+        private void MicrophoneButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!isRecording)
+            {
+                var animation = _compositor.CreateScalarKeyFrameAnimation();
+                animation.InsertKeyFrame(1.0f, 100); // Move to 300 pixels on the X axis
+                animation.Duration = TimeSpan.FromSeconds(1);
 
+                // Start the animation
+                _buttonVisual.StartAnimation("Offset.X", animation);
+
+                // Configure and start the timer to match the animation duration
+                _animationTimer.Interval = animation.Duration;
+                _animationTimer.Start();
+            }
+            else
+            {
+                LocalGifImage.Visibility = Visibility.Collapsed;
+                ButtonIcon.Glyph = "\uE720"; // Microphone icon
+            }
+            this.isRecording = !this.isRecording;
+        }
+
+        private void AnimationTimer_Tick(object sender, object e)
+        {
+            // Stop the timer
+            _animationTimer.Stop();
+
+            // Action to perform once the animation completes
+            // For example, show a message or update the UI
+
+            LocalGifImage.Visibility = Visibility.Visible;
+        }
         private bool TrySetMicaBackdrop()
         {
             if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
