@@ -14,5 +14,10 @@
                 <FontIcon x:Name="ButtonIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="36" />
             </Button.Content>
         </Button>
+        <TeachingTip x:Name="RecordTeachingTip"
+            Target="{x:Bind MicrophoneButton}"
+            Title="Start Recording"
+            Subtitle="Press button to start recording!">
+        </TeachingTip>
     </Grid>
 </Window>

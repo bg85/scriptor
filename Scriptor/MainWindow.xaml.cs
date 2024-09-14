@@ -17,6 +17,7 @@ namespace Scriptor
         private Visual _recordingBitmapVisual;
         private DispatcherTimer _recordingAnimationTimer;
         private DispatcherTimer _stoppingAnimationTimer;
+        private DispatcherTimer _teachingTipTimer;
         private ScalarKeyFrameAnimation _buttonToRightAnimation;
         private ScalarKeyFrameAnimation _buttonToLeftAnimation;
         private ScalarKeyFrameAnimation _talkingToVisibleAnimation;
@@ -31,6 +32,7 @@ namespace Scriptor
             this.InitializeComponent();
 
             this.SetupAnimations();
+            this.SetupRecordTeachingTip();
         }
 
         private void MicrophoneButton_Click(object sender, RoutedEventArgs e)
@@ -112,7 +114,7 @@ namespace Scriptor
             //Create a scalar animation to move button to the left
             _buttonToLeftAnimation = _compositor.CreateScalarKeyFrameAnimation();
             _buttonToLeftAnimation.InsertKeyFrame(0.0f, endX);    // Start at the moved position
-            _buttonToLeftAnimation.InsertKeyFrame(1.0f, startX); // Move back to original position
+            _buttonToLeftAnimation.InsertKeyFrame(1.0f, startX);  // Move back to original position
             _buttonToLeftAnimation.Duration = TimeSpan.FromSeconds(1);
 
             // Create a scalar animation for the opacity of the recording bitmap
@@ -126,6 +128,24 @@ namespace Scriptor
             _talkingToInvisibleAnimation.InsertKeyFrame(0f, 1f); // Start as invisible
             _talkingToInvisibleAnimation.InsertKeyFrame(1f, 0f); // End as fully visible
             _talkingToInvisibleAnimation.Duration = TimeSpan.FromSeconds(1);
+        }
+
+        private void SetupRecordTeachingTip()
+        {
+            RecordTeachingTip.IsOpen = true;
+            
+            // Initialize the timer
+            _teachingTipTimer = new DispatcherTimer();
+            _teachingTipTimer.Tick += TeachingTipTimer_Tick;
+            _teachingTipTimer.Interval = TimeSpan.FromSeconds(5);
+            _teachingTipTimer.Start();
+        }
+
+        private void TeachingTipTimer_Tick(object sender, object e)
+        {
+            // Stop the timer
+            _teachingTipTimer.Stop();
+            RecordTeachingTip.IsOpen = false;
         }
 
         private bool TrySetMicaBackdrop()
