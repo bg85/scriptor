@@ -3,6 +3,9 @@ using System;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Composition;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI;
 
 namespace Scriptor
 {
@@ -17,7 +20,7 @@ namespace Scriptor
         private Visual _recordingBitmapVisual;
         private DispatcherTimer _recordingAnimationTimer;
         private DispatcherTimer _stoppingAnimationTimer;
-        private DispatcherTimer _teachingTipTimer;
+        //private DispatcherTimer _teachingTipTimer;
         private ScalarKeyFrameAnimation _buttonToRightAnimation;
         private ScalarKeyFrameAnimation _buttonToLeftAnimation;
         private ScalarKeyFrameAnimation _talkingToVisibleAnimation;
@@ -25,14 +28,14 @@ namespace Scriptor
 
         public MainWindow()
         {
-            this.AppWindow.Resize(new Windows.Graphics.SizeInt32(800, 400));
+            this.AppWindow.Resize(new Windows.Graphics.SizeInt32(820, 450));
             this.TrySetMicaBackdrop();
             this.ExtendsContentIntoTitleBar = true;
 
             this.InitializeComponent();
 
             this.SetupAnimations();
-            this.SetupRecordTeachingTip();
+            //this.SetupRecordTeachingTip();
         }
 
         private void MicrophoneButton_Click(object sender, RoutedEventArgs e)
@@ -60,6 +63,9 @@ namespace Scriptor
 
             MicrophoneButton.IsEnabled = true;
             ButtonIcon.Glyph = "\uE004"; // Stop icon
+            ButtonIcon.Foreground = new SolidColorBrush(Colors.IndianRed);
+            ToolTipService.SetToolTip(MicrophoneButton, "Press to stop recording!");
+            RecordingInfoBar.Message = "We are listening. Press the button to stop recording.";
 
             _recordingBitmapVisual.StartAnimation("Opacity", _talkingToVisibleAnimation);
         }
@@ -70,7 +76,10 @@ namespace Scriptor
             _stoppingAnimationTimer.Stop();
 
             MicrophoneButton.IsEnabled = true;
-            ButtonIcon.Glyph = "\uE720"; // Stop icon
+            ButtonIcon.Glyph = "\uE720"; // Microphone icon
+            ButtonIcon.Foreground = new SolidColorBrush(Colors.DarkBlue);
+            ToolTipService.SetToolTip(MicrophoneButton, "Press to start recording!");
+            RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
 
             _buttonVisual.StartAnimation("Offset.X", _buttonToLeftAnimation);
         }
@@ -102,7 +111,7 @@ namespace Scriptor
 
             // Define the animation parameters
             float startX = originalX + marginLeft; // Adjusted starting position considering padding
-            float endX = startX + 100; // End position to the right
+            float endX = startX + 90; // End position to the right
 
             //Create a scalar animation to move button to the right
             _buttonToRightAnimation = _compositor.CreateScalarKeyFrameAnimation();
@@ -130,23 +139,23 @@ namespace Scriptor
             _talkingToInvisibleAnimation.Duration = TimeSpan.FromSeconds(1);
         }
 
-        private void SetupRecordTeachingTip()
-        {
-            RecordTeachingTip.IsOpen = true;
+        //private void SetupRecordTeachingTip()
+        //{
+        //    RecordTeachingTip.IsOpen = true;
             
-            // Initialize the timer
-            _teachingTipTimer = new DispatcherTimer();
-            _teachingTipTimer.Tick += TeachingTipTimer_Tick;
-            _teachingTipTimer.Interval = TimeSpan.FromSeconds(5);
-            _teachingTipTimer.Start();
-        }
+        //    // Initialize the timer
+        //    _teachingTipTimer = new DispatcherTimer();
+        //    _teachingTipTimer.Tick += TeachingTipTimer_Tick;
+        //    _teachingTipTimer.Interval = TimeSpan.FromSeconds(5);
+        //    _teachingTipTimer.Start();
+        //}
 
-        private void TeachingTipTimer_Tick(object sender, object e)
-        {
-            // Stop the timer
-            _teachingTipTimer.Stop();
-            RecordTeachingTip.IsOpen = false;
-        }
+        //private void TeachingTipTimer_Tick(object sender, object e)
+        //{
+        //    // Stop the timer
+        //    _teachingTipTimer.Stop();
+        //    RecordTeachingTip.IsOpen = false;
+        //}
 
         private bool TrySetMicaBackdrop()
         {

@@ -8,16 +8,26 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:foundation="using:Windows.Foundation"
     mc:Ignorable="d">
     <Grid VerticalAlignment="Center" HorizontalAlignment="Left">
-        <Image x:Name="RecordingGifImage" Width="300" Height="200"/>
-        <Button x:Name="MicrophoneButton" Width="100" Height="100" Click="MicrophoneButton_Click" Margin="140,0,0,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="120"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Image x:Name="RecordingGifImage" Width="300" Height="200" Grid.Row="0" Grid.Column="0" Margin="-120,-42,0,0"/>
+        <Button x:Name="MicrophoneButton" Width="100" Height="100" Click="MicrophoneButton_Click" Margin="148,0,0,0" ToolTipService.ToolTip="Press to start recording!" Grid.Row="0" Grid.Column="0">
             <Button.Content>
-                <FontIcon x:Name="ButtonIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="36" />
+                <FontIcon x:Name="ButtonIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="36" Foreground="DarkBlue" />
             </Button.Content>
         </Button>
-        <TeachingTip x:Name="RecordTeachingTip"
+        <!--<TeachingTip x:Name="RecordTeachingTip"
             Target="{x:Bind MicrophoneButton}"
             Title="Start Recording"
             Subtitle="Press button to start recording!">
-        </TeachingTip>
+        </TeachingTip>-->
+        <InfoBar x:Name="RecordingInfoBar" IsOpen="True" IsIconVisible="True" IsClosable="False" Title="" HorizontalAlignment="Center" VerticalAlignment="Center" Width="Auto" Grid.Row="1" Grid.Column="0" Margin="5,0,5,0" Foreground="RoyalBlue"
+            Message="Press the button and start talking. We'll do the rest." />
     </Grid>
 </Window>
