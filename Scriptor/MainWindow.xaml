@@ -7,12 +7,12 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:foundation="using:Windows.Foundation"
     mc:Ignorable="d">
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Image x:Name="LocalGifImage" Width="200" Height="200" Visibility="Collapsed"/>
-        <Button x:Name="MicrophoneButton" Width="100" Height="100" Click="MicrophoneButton_Click">
+    <Grid VerticalAlignment="Center" HorizontalAlignment="Left">
+        <Image x:Name="RecordingGifImage" Width="300" Height="200"/>
+        <Button x:Name="MicrophoneButton" Width="100" Height="100" Click="MicrophoneButton_Click" Margin="140,0,0,0">
             <Button.Content>
                 <FontIcon x:Name="ButtonIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="36" />
             </Button.Content>
         </Button>
-    </StackPanel>
+    </Grid>
 </Window>

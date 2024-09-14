@@ -1,26 +1,8 @@
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-using Microsoft.UI.Xaml.Media.Animation;
-using System.Timers;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Composition;
-using Windows.UI.Xaml;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace Scriptor
 {
@@ -30,12 +12,15 @@ namespace Scriptor
     public sealed partial class MainWindow : Window
     {
         private bool isRecording;
-        //private Timer _timer;
-        //private Random _random;
-
         private Compositor _compositor;
         private Visual _buttonVisual;
-        private DispatcherTimer _animationTimer;
+        private Visual _recordingBitmapVisual;
+        private DispatcherTimer _recordingAnimationTimer;
+        private DispatcherTimer _stoppingAnimationTimer;
+        private ScalarKeyFrameAnimation _buttonToRightAnimation;
+        private ScalarKeyFrameAnimation _buttonToLeftAnimation;
+        private ScalarKeyFrameAnimation _talkingToVisibleAnimation;
+        private ScalarKeyFrameAnimation _talkingToInvisibleAnimation;
 
         public MainWindow()
         {
@@ -45,50 +30,104 @@ namespace Scriptor
 
             this.InitializeComponent();
 
-            // Get the compositor
-            _compositor = this.Compositor;
-            _buttonVisual = ElementCompositionPreview.GetElementVisual(MicrophoneButton);
-            // Initialize the timer
-            _animationTimer = new DispatcherTimer();
-            _animationTimer.Tick += AnimationTimer_Tick;
-
-            BitmapImage bitmapImage = new BitmapImage(new Uri("ms-appx:///Assets/recording.gif"));
-            LocalGifImage.Source = bitmapImage;
+            this.SetupAnimations();
         }
 
         private void MicrophoneButton_Click(object sender, RoutedEventArgs e)
         {
             if (!isRecording)
             {
-                var animation = _compositor.CreateScalarKeyFrameAnimation();
-                animation.InsertKeyFrame(1.0f, 100); // Move to 300 pixels on the X axis
-                animation.Duration = TimeSpan.FromSeconds(1);
-
-                // Start the animation
-                _buttonVisual.StartAnimation("Offset.X", animation);
-
-                // Configure and start the timer to match the animation duration
-                _animationTimer.Interval = animation.Duration;
-                _animationTimer.Start();
+                MicrophoneButton.IsEnabled = false;
+                _buttonVisual.StartAnimation("Offset.X", _buttonToRightAnimation);
+                _recordingAnimationTimer.Start();
             }
             else
             {
-                LocalGifImage.Visibility = Visibility.Collapsed;
-                ButtonIcon.Glyph = "\uE720"; // Microphone icon
+                MicrophoneButton.IsEnabled = false;
+                _recordingBitmapVisual.StartAnimation("Opacity", _talkingToInvisibleAnimation);
+                _stoppingAnimationTimer.Start();
             }
+
             this.isRecording = !this.isRecording;
         }
 
-        private void AnimationTimer_Tick(object sender, object e)
+        private void RecordingAnimationTimer_Tick(object sender, object e)
         {
             // Stop the timer
-            _animationTimer.Stop();
+            _recordingAnimationTimer.Stop();
 
-            // Action to perform once the animation completes
-            // For example, show a message or update the UI
+            MicrophoneButton.IsEnabled = true;
+            ButtonIcon.Glyph = "\uE004"; // Stop icon
 
-            LocalGifImage.Visibility = Visibility.Visible;
+            _recordingBitmapVisual.StartAnimation("Opacity", _talkingToVisibleAnimation);
         }
+
+        private void StoppingAnimationTimer_Tick(object sender, object e)
+        {
+            // Stop the timer
+            _stoppingAnimationTimer.Stop();
+
+            MicrophoneButton.IsEnabled = true;
+            ButtonIcon.Glyph = "\uE720"; // Stop icon
+
+            _buttonVisual.StartAnimation("Offset.X", _buttonToLeftAnimation);
+        }
+
+        private void SetupAnimations()
+        {
+            // Get the compositor
+            _compositor = this.Compositor;
+            _buttonVisual = ElementCompositionPreview.GetElementVisual(MicrophoneButton);
+            _recordingBitmapVisual = ElementCompositionPreview.GetElementVisual(RecordingGifImage);
+
+            // Initialize the timers
+            _recordingAnimationTimer = new DispatcherTimer();
+            _recordingAnimationTimer.Tick += RecordingAnimationTimer_Tick;
+
+            // Initialize the timer
+            _stoppingAnimationTimer = new DispatcherTimer();
+            _stoppingAnimationTimer.Tick += StoppingAnimationTimer_Tick;
+
+            //RecordingGifImage.Visibility = Visibility.Collapsed;
+            RecordingGifImage.Opacity = 0;
+            BitmapImage recordingBitmapImage = new(new Uri("ms-appx:///Assets/recording.gif"));
+            RecordingGifImage.Source = recordingBitmapImage;
+
+            // Get the current position of the button
+            var transformMatrix = _buttonVisual.TransformMatrix;
+            float originalX = (float)transformMatrix.M31; // Current X position of the button
+            float marginLeft = (float)MicrophoneButton.Margin.Left; // Margin on the left
+
+            // Define the animation parameters
+            float startX = originalX + marginLeft; // Adjusted starting position considering padding
+            float endX = startX + 100; // End position to the right
+
+            //Create a scalar animation to move button to the right
+            _buttonToRightAnimation = _compositor.CreateScalarKeyFrameAnimation();
+            _buttonToRightAnimation.InsertKeyFrame(0.0f, startX); // Start at adjusted position
+            _buttonToRightAnimation.InsertKeyFrame(1.0f, endX);   // Move to the right
+            _buttonToRightAnimation.Duration = TimeSpan.FromSeconds(1);
+            _recordingAnimationTimer.Interval = _buttonToRightAnimation.Duration;
+
+            //Create a scalar animation to move button to the left
+            _buttonToLeftAnimation = _compositor.CreateScalarKeyFrameAnimation();
+            _buttonToLeftAnimation.InsertKeyFrame(0.0f, endX);    // Start at the moved position
+            _buttonToLeftAnimation.InsertKeyFrame(1.0f, startX); // Move back to original position
+            _buttonToLeftAnimation.Duration = TimeSpan.FromSeconds(1);
+
+            // Create a scalar animation for the opacity of the recording bitmap
+            _talkingToVisibleAnimation = _compositor.CreateScalarKeyFrameAnimation();
+            _talkingToVisibleAnimation.InsertKeyFrame(0f, 0f); // Start as invisible
+            _talkingToVisibleAnimation.InsertKeyFrame(1f, 1f); // End as fully visible
+            _talkingToVisibleAnimation.Duration = TimeSpan.FromSeconds(1);
+
+            // Create a scalar animation for the opacity of the recording bitmap
+            _talkingToInvisibleAnimation = _compositor.CreateScalarKeyFrameAnimation();
+            _talkingToInvisibleAnimation.InsertKeyFrame(0f, 1f); // Start as invisible
+            _talkingToInvisibleAnimation.InsertKeyFrame(1f, 0f); // End as fully visible
+            _talkingToInvisibleAnimation.Duration = TimeSpan.FromSeconds(1);
+        }
+
         private bool TrySetMicaBackdrop()
         {
             if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
