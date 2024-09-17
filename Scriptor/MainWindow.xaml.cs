@@ -6,6 +6,12 @@ using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI;
+using Scriptor.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Windows.Media.Capture;
+using System.Threading.Tasks;
+using Polly.Retry;
+using Polly;
 
 namespace Scriptor
 {
@@ -25,6 +31,9 @@ namespace Scriptor
         private ScalarKeyFrameAnimation _buttonToLeftAnimation;
         private ScalarKeyFrameAnimation _talkingToVisibleAnimation;
         private ScalarKeyFrameAnimation _talkingToInvisibleAnimation;
+        private readonly RetryPolicy _retryPolicy;
+
+        private readonly IVoiceRecorder _voiceRecorder;
 
         public MainWindow()
         {
@@ -36,26 +45,90 @@ namespace Scriptor
 
             this.SetupAnimations();
             //this.SetupRecordTeachingTip();
+
+            _retryPolicy = Policy.Handle<Exception>()
+                                 .WaitAndRetry(50, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+
+            _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
+            _voiceRecorder.MediaCapture_Failed = RecordingFailed;
+            _voiceRecorder.MediaCapture_RecordLimitationExceeded = RecordingLimitationExceeded;
+            Task.Run(async () =>
+            {
+                await _voiceRecorder.Initialize();
+            });
+            //var result = _retryPolicy.Execute(() =>
+            //{
+            //    if (!_voiceRecorder.IsReady)
+            //    {
+            //        throw new Exception("Storage Folder not created yet");
+            //    }
+            //    return true;
+            //});
+        }
+
+        private void RecordingFailed(MediaCapture sender, MediaCaptureFailedEventArgs failedArgs)
+        {
+            //TODO Analytics, update UI
+        }
+
+        private void RecordingLimitationExceeded(MediaCapture sender)
+        {
+            //TODO Analytics, update UI
         }
 
         private void MicrophoneButton_Click(object sender, RoutedEventArgs e)
         {
             if (!isRecording)
             {
-                MicrophoneButton.IsEnabled = false;
-                _buttonVisual.StartAnimation("Offset.X", _buttonToRightAnimation);
-                _recordingAnimationTimer.Start();
+                this.StartRecording();
             }
             else
             {
-                MicrophoneButton.IsEnabled = false;
-                _recordingBitmapVisual.StartAnimation("Opacity", _talkingToInvisibleAnimation);
-                _stoppingAnimationTimer.Start();
+                this.StopRecording();
             }
-
-            this.isRecording = !this.isRecording;
         }
 
+        private void StartRecording()
+        {
+            this.isRecording = !this.isRecording;
+            MicrophoneButton.IsEnabled = false;
+            _buttonVisual.StartAnimation("Offset.X", _buttonToRightAnimation);
+            _recordingAnimationTimer.Start();
+
+            Task.Run(async () =>
+            {
+                var recordingStarted = await _voiceRecorder.StartRecording();
+                if (!recordingStarted)
+                {
+                    // TODO: Logs/Metrics (write exception message to logs, including userId)
+                    // retry
+                    RecordingInfoBar.Message = "Recording failed to start. Please try again.";
+                    this.StopRecording(true);
+                }
+            });
+        }
+
+        private void StopRecording(bool withError = false)
+        {
+            this.isRecording = !this.isRecording;
+            MicrophoneButton.IsEnabled = false;
+            _recordingBitmapVisual.StartAnimation("Opacity", _talkingToInvisibleAnimation);
+            _stoppingAnimationTimer.Start();
+
+            if (!withError)
+            {
+                Task.Run(async () =>
+                {
+                    var recordingStopped = await _voiceRecorder.StopRecording();
+                    if (!recordingStopped)
+                    {
+                        // TODO: Logs/Metrics (write exception message to logs, including userId)
+                        //retry
+                        //dispose class and recreate it 
+                    }
+                });
+            }
+        }
         private void RecordingAnimationTimer_Tick(object sender, object e)
         {
             // Stop the timer
