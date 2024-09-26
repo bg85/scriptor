@@ -7,60 +7,49 @@ using Windows.Storage;
 namespace Scriptor.Services
 {
     public interface IVoiceRecorder {
-        MediaCaptureFailedEventHandler MediaCapture_Failed { set; }
-        RecordLimitationExceededEventHandler MediaCapture_RecordLimitationExceeded { set; }
         bool IsReady { get; }
-
-        Task Initialize();
         Task<bool> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium);
-        Task<bool> StopRecording();
+        Task<string> StopRecording();
     }
 
     public class VoiceRecorder : IVoiceRecorder, IDisposable
     {
         private MediaCapture _mediaCapture;
         private StorageFolder _storageFolder;
-        private LowLagMediaRecording _mediaRecording;
-        private bool disposedValue;
+        private string _fileName;
 
-        public MediaCaptureFailedEventHandler MediaCapture_Failed { 
-            set { 
-                if( _mediaCapture == null )
-                    _mediaCapture = new MediaCapture();
-                _mediaCapture.Failed += value; 
-            } 
-        }
-        public RecordLimitationExceededEventHandler MediaCapture_RecordLimitationExceeded { 
-            set {
-                if (_mediaCapture == null)
-                    _mediaCapture = new MediaCapture();
-                _mediaCapture.RecordLimitationExceeded += value; 
-            } 
+        private async Task InitializeMediaCaptureAsync()
+        {
+            _mediaCapture = new MediaCapture();
+            var settings = new MediaCaptureInitializationSettings
+            {
+                StreamingCaptureMode = StreamingCaptureMode.Audio
+            };
+
+            try
+            {
+                await _mediaCapture.InitializeAsync(settings);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions
+            }
         }
 
         public bool IsReady { get => _mediaCapture != null && _storageFolder != null; }
 
-        public async Task Initialize()
-        {
-            _storageFolder = await ApplicationData.Current.LocalFolder.CreateFolderAsync("Recordings", CreationCollisionOption.OpenIfExists);
-            
-            if (_mediaCapture == null)
-                _mediaCapture = new MediaCapture();
-
-            await _mediaCapture.InitializeAsync();
-        }
-
         public async Task<bool> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium)
         {
             try {
+                _storageFolder = await ApplicationData.Current.LocalFolder.CreateFolderAsync("Recordings", CreationCollisionOption.OpenIfExists);
                 var file = await _storageFolder.CreateFileAsync($"{Guid.NewGuid().ToString()}.mp3", CreationCollisionOption.GenerateUniqueName);
-                _mediaRecording = await _mediaCapture.PrepareLowLagRecordToStorageFileAsync(
-                        MediaEncodingProfile.CreateMp3(encodingQuality), file);
-                await _mediaRecording.StartAsync();
+                _fileName = file.Name;
 
+                await this.InitializeMediaCaptureAsync();
+                await _mediaCapture.StartRecordToStorageFileAsync(MediaEncodingProfile.CreateMp3(encodingQuality), file);
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // TODO: Logs/Metrics (write exception message to logs, including userId)
                 // Handle exceptions gracefully
@@ -69,50 +58,65 @@ namespace Scriptor.Services
             }
         }
 
-        public async Task<bool> StopRecording()
+        public async Task<string> StopRecording()
         {
             try
             {
-                await _mediaRecording.StopAsync();
-
-                return true;
+                await _mediaCapture.StopRecordAsync();
+                return _fileName;
             }
             catch (Exception ex)
             {
                 // Handle exceptions gracefully
                 System.Diagnostics.Debug.WriteLine(ex.Message);
-                return false;
+                return null;
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (disposing && _mediaCapture != null)
             {
-                if (disposing)
-                {
-                    _mediaRecording = null;
-                }
-
-                Task.Run(async () =>
-                {
-                    await _mediaRecording.FinishAsync();
-                    disposedValue = true;
-                });
+                //await _mediaCapture.StopRecordAsync();
+                _mediaCapture.Dispose();
+                _mediaCapture = null;
             }
         }
 
-        ~VoiceRecorder()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: false);
-        }
+        //protected virtual void Dispose(bool disposing)
+        //{
+        //    if (!disposedValue)
+        //    {
+        //        if (disposing)
+        //        {
+        //            _mediaCapture = null;
+        //        }
 
-        void IDisposable.Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
+        //        Task.Run(async () =>
+        //        {
+        //            await _mediaCapture.FinishAsync();
+        //            disposedValue = true;
+        //        });
+        //    }
+        //}
+
+        //~VoiceRecorder()
+        //{
+        //    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //    Dispose(disposing: false);
+        //}
+
+        //void IDisposable.Dispose()
+        //{
+        //    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //    Dispose(disposing: true);
+        //    GC.SuppressFinalize(this);
+        //}
     }
 }

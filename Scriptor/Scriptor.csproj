@@ -22,11 +22,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="Assets\recording.gif" />
+    <None Remove="Assets\scriptor-436001-263ca8b206ad.txt" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
-    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\Square150x150Logo.scale-200.png" />
     <Content Include="Assets\Square44x44Logo.scale-200.png" />
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
@@ -35,7 +38,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Apis" Version="1.68.0" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+    <PackageReference Include="Google.Apis.CloudFunctions.v2" Version="1.68.0.3535" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="19.225.1" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.240829007" />
     <PackageReference Include="Polly" Version="8.4.1" />
@@ -50,6 +57,9 @@
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
   </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
+  </PropertyGroup>
 
   <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
@@ -64,5 +74,10 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Assets\Recordings\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="Assets\scriptor-436001-263ca8b206ad.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

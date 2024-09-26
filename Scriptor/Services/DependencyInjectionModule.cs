@@ -8,6 +8,7 @@ namespace Scriptor.Services
         {
             // Register your dependencies here
             services.AddSingleton<IVoiceRecorder, VoiceRecorder>();
+            services.AddSingleton<ITranslator, Translator>();
         }
     }
 }

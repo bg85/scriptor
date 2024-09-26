@@ -8,10 +8,12 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI;
 using Scriptor.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Windows.Media.Capture;
 using System.Threading.Tasks;
 using Polly.Retry;
 using Polly;
+using System.IO;
+using Windows.Storage;
+using Windows.ApplicationModel;
 
 namespace Scriptor
 {
@@ -34,6 +36,8 @@ namespace Scriptor
         private readonly RetryPolicy _retryPolicy;
 
         private readonly IVoiceRecorder _voiceRecorder;
+        //private Task _recordTask;
+        private readonly ITranslator _translator;
 
         public MainWindow()
         {
@@ -50,12 +54,14 @@ namespace Scriptor
                                  .WaitAndRetry(50, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
             _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
-            _voiceRecorder.MediaCapture_Failed = RecordingFailed;
-            _voiceRecorder.MediaCapture_RecordLimitationExceeded = RecordingLimitationExceeded;
-            Task.Run(async () =>
-            {
-                await _voiceRecorder.Initialize();
-            });
+            //_voiceRecorder.MediaCapture_Failed = RecordingFailed;
+            //_voiceRecorder.MediaCapture_RecordLimitationExceeded = RecordingLimitationExceeded;
+            //_recordTask = Task.Run(async () =>
+            //{
+            //    await _voiceRecorder.Initialize();
+            //});
+
+            _translator = App.ServiceProvider.GetRequiredService<ITranslator>();
             //var result = _retryPolicy.Execute(() =>
             //{
             //    if (!_voiceRecorder.IsReady)
@@ -64,51 +70,52 @@ namespace Scriptor
             //    }
             //    return true;
             //});
+
+           //TODO: at the begining I could create an async task to delete old recordings
         }
 
-        private void RecordingFailed(MediaCapture sender, MediaCaptureFailedEventArgs failedArgs)
-        {
-            //TODO Analytics, update UI
-        }
+        //private void RecordingFailed(MediaCapture sender, MediaCaptureFailedEventArgs failedArgs)
+        //{
+        //    //TODO Analytics, update UI
+        //}
 
-        private void RecordingLimitationExceeded(MediaCapture sender)
-        {
-            //TODO Analytics, update UI
-        }
+        //private void RecordingLimitationExceeded(MediaCapture sender)
+        //{
+        //    //TODO Analytics, update UI
+        //}
 
-        private void MicrophoneButton_Click(object sender, RoutedEventArgs e)
+        private async void MicrophoneButton_Click(object sender, RoutedEventArgs e)
         {
             if (!isRecording)
             {
-                this.StartRecording();
+                await this.StartRecording();
             }
             else
             {
-                this.StopRecording();
+                await this.StopRecording();
             }
         }
 
-        private void StartRecording()
+        private async Task StartRecording()
         {
             this.isRecording = !this.isRecording;
             MicrophoneButton.IsEnabled = false;
             _buttonVisual.StartAnimation("Offset.X", _buttonToRightAnimation);
             _recordingAnimationTimer.Start();
 
-            Task.Run(async () =>
+            //await _recordTask;
+
+            var recordingStarted = await _voiceRecorder.StartRecording();
+            if (!recordingStarted)
             {
-                var recordingStarted = await _voiceRecorder.StartRecording();
-                if (!recordingStarted)
-                {
-                    // TODO: Logs/Metrics (write exception message to logs, including userId)
-                    // retry
-                    RecordingInfoBar.Message = "Recording failed to start. Please try again.";
-                    this.StopRecording(true);
-                }
-            });
+                // TODO: Logs/Metrics (write exception message to logs, including userId)
+                // retry
+                RecordingInfoBar.Message = "Recording failed to start. Please try again.";
+                await this.StopRecording(true);
+            }
         }
 
-        private void StopRecording(bool withError = false)
+        private async Task StopRecording(bool withError = false)
         {
             this.isRecording = !this.isRecording;
             MicrophoneButton.IsEnabled = false;
@@ -117,18 +124,23 @@ namespace Scriptor
 
             if (!withError)
             {
-                Task.Run(async () =>
+                var recordingName = await _voiceRecorder.StopRecording();
+                if (recordingName == null)
                 {
-                    var recordingStopped = await _voiceRecorder.StopRecording();
-                    if (!recordingStopped)
-                    {
-                        // TODO: Logs/Metrics (write exception message to logs, including userId)
-                        //retry
-                        //dispose class and recreate it 
-                    }
-                });
+                    // TODO: Logs/Metrics (write exception message to logs, including userId)
+                    //retry
+                    //dispose class and recreate it 
+                }
+                else
+                {
+                    //TODO: Add exception handling and monitoring
+                    var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
+                    var file = await assetsFolder.GetFileAsync(recordingName);
+                    await _translator.Translate(file.Path);
+                }
             }
         }
+
         private void RecordingAnimationTimer_Tick(object sender, object e)
         {
             // Stop the timer
