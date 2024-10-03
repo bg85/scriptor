@@ -22,7 +22,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="Assets\recording.gif" />
-    <None Remove="Assets\scriptor-436001-263ca8b206ad.txt" />
+    <None Remove="Assets\scriptor-api.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,14 +38,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Apis" Version="1.68.0" />
-    <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
-    <PackageReference Include="Google.Apis.CloudFunctions.v2" Version="1.68.0.3535" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="19.225.1" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.240829007" />
-    <PackageReference Include="Polly" Version="8.4.1" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.240923002" />
+    <PackageReference Include="OpenAI" Version="2.0.0" />
+    <PackageReference Include="Polly" Version="8.4.2" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
@@ -73,11 +71,14 @@
     <PRIResource Remove="Recordings\**" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Assets\Recordings\" />
+    <Content Remove="Assets\scriptor-api.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Content Update="Assets\scriptor-436001-263ca8b206ad.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="Assets\scriptor-api.txt">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Assets\Recordings\" />
   </ItemGroup>
 </Project>

@@ -1,21 +1,19 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Net.Http;
-using Google.Apis.Auth.OAuth2;
-using System.Net.Http.Headers;
-using System.Threading;
 using System.IO;
 using Windows.Storage;
+using OpenAI.Audio;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml;
-using Microsoft.VisualStudio.Services.Organization.Client;
-using Windows.ApplicationModel;
+using System.Reflection;
 
 
 namespace Scriptor.Services
 {
     public interface ITranslator
     {
-        Task<string> Translate(string fileName);
+        Task<string> Translate(string filePath);
     }
 
     public class Translator : ITranslator
@@ -23,69 +21,66 @@ namespace Scriptor.Services
         private static readonly HttpClient httpClient = new HttpClient();
         private const string translateApiUrl = "https://scriptor-backend-1093765759278.us-east1.run.app";
 
+        private async Task<string> GetFileContent()
+        {
+            try
+            {
+
+                //var localFolder = ApplicationData.Current.LocalFolder;
+                //var file = await localFolder.GetFileAsync("scriptor-api.txt");
+                //var fileContent = await FileIO.ReadTextAsync(file);
+
+                //return fileContent;
+
+                Assembly assembly = Assembly.GetExecutingAssembly();
+                string resourceName = "Scriptor.Assets.scriptor-api.txt";
+
+                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                {
+                    if (stream != null)
+                    {
+                        using (StreamReader reader = new StreamReader(stream))
+                        {
+                            string content = reader.ReadToEnd();
+                            return content;
+                        }
+                    }
+                    else
+                    {
+                        return "Resource not found.";
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                //TODO: Error handling
+                throw;
+            }
+        }
+
         public async Task<string> Translate(string filePath)
         {
             try
             {
-                var credPath = await this.GetFilePath("scriptor-436001-263ca8b206ad.txt");
-                var credential = GoogleCredential.FromFile(credPath);
-                var audience = translateApiUrl;
-                var token = await credential.GetOidcTokenAsync(OidcTokenOptions.FromTargetAudience(audience), CancellationToken.None);
-                var bt = await token.GetAccessTokenAsync(CancellationToken.None);
+                //AudioClient client = new("whisper-1", await this.GetFileContent());
 
-                // Create HttpClient to send web request
-                using (HttpClient hc = new HttpClient())
-                {
-                    hc.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bt);
+                //AudioTranscriptionOptions options = new()
+                //{
+                //    ResponseFormat = AudioTranscriptionFormat.Verbose,
+                //    TimestampGranularities = AudioTimestampGranularities.Word | AudioTimestampGranularities.Segment,
+                //};
 
-                    // Prepare the file content
-                    using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                    {
-                        var content = new MultipartFormDataContent();
-                        var fileContent = new StreamContent(fileStream);
-
-                        // Set the content type to audio/mpeg
-                        fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/mpeg");
-
-                        // Add the file content to the form data
-                        content.Add(fileContent, "file", Path.GetFileName(filePath));
-
-                        // Send the POST request
-                        HttpResponseMessage hr = await hc.PostAsync(translateApiUrl + "/upload", content);
-                        string responseBody = await hr.Content.ReadAsStringAsync();
-
-                        // Handle the response
-                        if (hr.IsSuccessStatusCode)
-                        {
-                            Console.WriteLine("File uploaded successfully!");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Error uploading file: {responseBody}");
-                        }
-
-                        return responseBody;
-                    }
-                }
-
-                //Create http client to send web request
-                //HttpClient hc = new HttpClient();
-                //hc.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bt);
-                //HttpResponseMessage hr = await hc.GetAsync(translateApiUrl);
-                //string responseBody = await hr.Content.ReadAsStringAsync();
+                //var transcription = await client.TranscribeAudioAsync(filePath, options);
+                //return transcription.Value.Text;
+                await Task.Delay(1000);
+                return "Hello";
             }
             catch (Exception ex)
             {
-                return $"Exception: {ex.Message}";
+                //TODO: handle exception
+                //throw;
+                return string.Empty;
             }
-        }
-
-        private async Task<string> GetFilePath(string fileName)
-        {
-            //TODO: Add try catch
-            var assetsFolder = await Package.Current.InstalledLocation.GetFolderAsync("Assets");
-            var file = await assetsFolder.GetFileAsync(fileName);
-            return file.Path;
         }
     }
 }

@@ -137,6 +137,12 @@ namespace Scriptor
                     var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
                     var file = await assetsFolder.GetFileAsync(recordingName);
                     await _translator.Translate(file.Path);
+
+                    MicrophoneButton.IsEnabled = true;
+                    BusyRing.Visibility = Visibility.Collapsed;
+                    RecordingInfoBar.Message = "The text have been copied to your clipboard.";
+                    await Task.Delay(5000);
+                    RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
                 }
             }
         }
@@ -160,13 +166,14 @@ namespace Scriptor
             // Stop the timer
             _stoppingAnimationTimer.Stop();
 
-            MicrophoneButton.IsEnabled = true;
+            //MicrophoneButton.IsEnabled = true;
             ButtonIcon.Glyph = "\uE720"; // Microphone icon
             ButtonIcon.Foreground = new SolidColorBrush(Colors.DarkBlue);
             ToolTipService.SetToolTip(MicrophoneButton, "Press to start recording!");
-            RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
+            RecordingInfoBar.Message = "Translating and copying to your clipboard.";
 
             _buttonVisual.StartAnimation("Offset.X", _buttonToLeftAnimation);
+            BusyRing.Visibility = Visibility.Visible;
         }
 
         private void SetupAnimations()

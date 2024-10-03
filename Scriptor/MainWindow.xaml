@@ -22,6 +22,7 @@
                 <FontIcon x:Name="ButtonIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="36" Foreground="DarkBlue" />
             </Button.Content>
         </Button>
+        <ProgressRing x:Name="BusyRing" IsActive="True" Background="LightGray" Height="100" Width="100" Visibility="Collapsed"/>
         <!--<TeachingTip x:Name="RecordTeachingTip"
             Target="{x:Bind MicrophoneButton}"
             Title="Start Recording"
