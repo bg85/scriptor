@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Net.Http;
-using System.IO;
-using Windows.Storage;
-using OpenAI.Audio;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml;
-using System.Reflection;
+using log4net;
 
 
 namespace Scriptor.Services
@@ -18,51 +13,24 @@ namespace Scriptor.Services
 
     public class Translator : ITranslator
     {
+        private ILog _logger;
+        private IResourceManager _resourceManager;
         private static readonly HttpClient httpClient = new HttpClient();
-        private const string translateApiUrl = "https://scriptor-backend-1093765759278.us-east1.run.app";
+        private const string TranslateApiUrl = "https://scriptor-backend-1093765759278.us-east1.run.app";
 
-        private async Task<string> GetFileContent()
+        public Translator(ILog logger, IResourceManager resourceManager)
         {
-            try
-            {
-
-                //var localFolder = ApplicationData.Current.LocalFolder;
-                //var file = await localFolder.GetFileAsync("scriptor-api.txt");
-                //var fileContent = await FileIO.ReadTextAsync(file);
-
-                //return fileContent;
-
-                Assembly assembly = Assembly.GetExecutingAssembly();
-                string resourceName = "Scriptor.Assets.scriptor-api.txt";
-
-                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-                {
-                    if (stream != null)
-                    {
-                        using (StreamReader reader = new StreamReader(stream))
-                        {
-                            string content = reader.ReadToEnd();
-                            return content;
-                        }
-                    }
-                    else
-                    {
-                        return "Resource not found.";
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                //TODO: Error handling
-                throw;
-            }
+            _logger = logger;
+            _resourceManager = resourceManager;
         }
 
         public async Task<string> Translate(string filePath)
         {
+            _logger.Info("Translating recording");
             try
             {
-                //AudioClient client = new("whisper-1", await this.GetFileContent());
+                var resourceContent = _resourceManager.GetResourceContent("Scriptor.Assets.scriptor-api.txt");
+                //AudioClient client = new("whisper-1", resourceContent);
 
                 //AudioTranscriptionOptions options = new()
                 //{
@@ -77,8 +45,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                //TODO: handle exception
-                //throw;
+                _logger.Error("Unable to translate recording", ex);
                 return string.Empty;
             }
         }

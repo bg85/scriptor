@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using log4net;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Scriptor.Services;
 using System;
@@ -14,6 +15,7 @@ namespace Scriptor
     public partial class App : Application
     {
         public static IServiceProvider ServiceProvider { get; private set; }
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(App));
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -26,6 +28,21 @@ namespace Scriptor
             var services = new ServiceCollection();
             new DependencyInjectionModule().RegisterServices(services);
             ServiceProvider = services.BuildServiceProvider();
+
+            Current.UnhandledException += OnUnhandledException;
+        }
+
+        private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+        {
+            Logger.Error("Unhandled exception occurred", e.Exception);
+            LogManager.Shutdown(); // Flush and shutdown log4net
+        }
+
+        // Handle window closure to flush and shutdown log4net
+        private void OnWindowClosed(object sender, Microsoft.UI.Xaml.WindowEventArgs e)
+        {
+            Logger.Info("Application is closing");
+            LogManager.Shutdown();  // Flush logs and shut down log4net
         }
 
         /// <summary>
@@ -35,6 +52,10 @@ namespace Scriptor
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             m_window = new MainWindow();
+
+            // Handle the main window's Closed event
+            m_window.Closed += OnWindowClosed;
+
             m_window.Activate();
         }
 

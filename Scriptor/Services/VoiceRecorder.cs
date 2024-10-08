@@ -1,4 +1,5 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Threading.Tasks;
 using Windows.Media.Capture;
 using Windows.Media.MediaProperties;
@@ -17,6 +18,9 @@ namespace Scriptor.Services
         private MediaCapture _mediaCapture;
         private StorageFolder _storageFolder;
         private string _fileName;
+        private ILog _logger;
+
+        public VoiceRecorder(ILog logger) => _logger = logger;
 
         private async Task InitializeMediaCaptureAsync()
         {
@@ -32,7 +36,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                // Handle exceptions
+                _logger.Error("Unable to Initialize media capture object.", ex);
             }
         }
 
@@ -51,9 +55,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                // TODO: Logs/Metrics (write exception message to logs, including userId)
-                // Handle exceptions gracefully
-                //System.Diagnostics.Debug.WriteLine(ex.Message);
+                _logger.Error($"Failed to start recording: {ex}", ex);
                 return false;
             }
         }
@@ -67,8 +69,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                // Handle exceptions gracefully
-                System.Diagnostics.Debug.WriteLine(ex.Message);
+                _logger.Error($"Failed to stop recording: {ex}", ex);
                 return null;
             }
         }
@@ -83,40 +84,9 @@ namespace Scriptor.Services
         {
             if (disposing && _mediaCapture != null)
             {
-                //await _mediaCapture.StopRecordAsync();
                 _mediaCapture.Dispose();
                 _mediaCapture = null;
             }
         }
-
-        //protected virtual void Dispose(bool disposing)
-        //{
-        //    if (!disposedValue)
-        //    {
-        //        if (disposing)
-        //        {
-        //            _mediaCapture = null;
-        //        }
-
-        //        Task.Run(async () =>
-        //        {
-        //            await _mediaCapture.FinishAsync();
-        //            disposedValue = true;
-        //        });
-        //    }
-        //}
-
-        //~VoiceRecorder()
-        //{
-        //    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //    Dispose(disposing: false);
-        //}
-
-        //void IDisposable.Dispose()
-        //{
-        //    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //    Dispose(disposing: true);
-        //    GC.SuppressFinalize(this);
-        //}
     }
 }

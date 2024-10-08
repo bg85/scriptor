@@ -11,9 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
 using Polly.Retry;
 using Polly;
-using System.IO;
 using Windows.Storage;
-using Windows.ApplicationModel;
+using log4net;
 
 namespace Scriptor
 {
@@ -28,7 +27,6 @@ namespace Scriptor
         private Visual _recordingBitmapVisual;
         private DispatcherTimer _recordingAnimationTimer;
         private DispatcherTimer _stoppingAnimationTimer;
-        //private DispatcherTimer _teachingTipTimer;
         private ScalarKeyFrameAnimation _buttonToRightAnimation;
         private ScalarKeyFrameAnimation _buttonToLeftAnimation;
         private ScalarKeyFrameAnimation _talkingToVisibleAnimation;
@@ -36,8 +34,8 @@ namespace Scriptor
         private readonly RetryPolicy _retryPolicy;
 
         private readonly IVoiceRecorder _voiceRecorder;
-        //private Task _recordTask;
         private readonly ITranslator _translator;
+        private readonly ILog _logger;
 
         public MainWindow()
         {
@@ -48,41 +46,16 @@ namespace Scriptor
             this.InitializeComponent();
 
             this.SetupAnimations();
-            //this.SetupRecordTeachingTip();
 
             _retryPolicy = Policy.Handle<Exception>()
                                  .WaitAndRetry(50, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
             _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
-            //_voiceRecorder.MediaCapture_Failed = RecordingFailed;
-            //_voiceRecorder.MediaCapture_RecordLimitationExceeded = RecordingLimitationExceeded;
-            //_recordTask = Task.Run(async () =>
-            //{
-            //    await _voiceRecorder.Initialize();
-            //});
 
             _translator = App.ServiceProvider.GetRequiredService<ITranslator>();
-            //var result = _retryPolicy.Execute(() =>
-            //{
-            //    if (!_voiceRecorder.IsReady)
-            //    {
-            //        throw new Exception("Storage Folder not created yet");
-            //    }
-            //    return true;
-            //});
 
-           //TODO: at the begining I could create an async task to delete old recordings
+            _logger = App.ServiceProvider.GetRequiredService<ILog>();
         }
-
-        //private void RecordingFailed(MediaCapture sender, MediaCaptureFailedEventArgs failedArgs)
-        //{
-        //    //TODO Analytics, update UI
-        //}
-
-        //private void RecordingLimitationExceeded(MediaCapture sender)
-        //{
-        //    //TODO Analytics, update UI
-        //}
 
         private async void MicrophoneButton_Click(object sender, RoutedEventArgs e)
         {
@@ -98,52 +71,72 @@ namespace Scriptor
 
         private async Task StartRecording()
         {
-            this.isRecording = !this.isRecording;
-            MicrophoneButton.IsEnabled = false;
-            _buttonVisual.StartAnimation("Offset.X", _buttonToRightAnimation);
-            _recordingAnimationTimer.Start();
-
-            //await _recordTask;
-
-            var recordingStarted = await _voiceRecorder.StartRecording();
-            if (!recordingStarted)
+            try
             {
-                // TODO: Logs/Metrics (write exception message to logs, including userId)
-                // retry
-                RecordingInfoBar.Message = "Recording failed to start. Please try again.";
-                await this.StopRecording(true);
+                this.isRecording = !this.isRecording;
+                MicrophoneButton.IsEnabled = false;
+                _buttonVisual.StartAnimation("Offset.X", _buttonToRightAnimation);
+                _recordingAnimationTimer.Start();
+
+                var recordingStarted = await _voiceRecorder.StartRecording();
+                if (!recordingStarted)
+                {
+                    _logger.Error($"Recording failed to start for client: {Windows.System.Profile.SystemIdentification.GetSystemIdForPublisher()}");
+                    RecordingInfoBar.Message = "Recording failed to start. Please try again.";
+                    await this.StopRecording(true);
+                }
+            }
+            catch (Exception ex) 
+            {
+                _logger.Error("Exception starting recording.", ex);
             }
         }
 
         private async Task StopRecording(bool withError = false)
         {
-            this.isRecording = !this.isRecording;
-            MicrophoneButton.IsEnabled = false;
-            _recordingBitmapVisual.StartAnimation("Opacity", _talkingToInvisibleAnimation);
-            _stoppingAnimationTimer.Start();
-
-            if (!withError)
+            try
             {
-                var recordingName = await _voiceRecorder.StopRecording();
-                if (recordingName == null)
-                {
-                    // TODO: Logs/Metrics (write exception message to logs, including userId)
-                    //retry
-                    //dispose class and recreate it 
-                }
-                else
-                {
-                    //TODO: Add exception handling and monitoring
-                    var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
-                    var file = await assetsFolder.GetFileAsync(recordingName);
-                    await _translator.Translate(file.Path);
+                this.isRecording = !this.isRecording;
+                MicrophoneButton.IsEnabled = false;
+                _recordingBitmapVisual.StartAnimation("Opacity", _talkingToInvisibleAnimation);
+                _stoppingAnimationTimer.Start();
 
-                    MicrophoneButton.IsEnabled = true;
-                    BusyRing.Visibility = Visibility.Collapsed;
-                    RecordingInfoBar.Message = "The text have been copied to your clipboard.";
-                    await Task.Delay(5000);
-                    RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
+                if (!withError)
+                {
+                    await _retryPolicy.Execute(async () =>
+                    {
+                        var recordingName = await _voiceRecorder.StopRecording();
+                        if (recordingName == null)
+                        {
+                            _logger.Error("Error stopping recording.");
+                            throw new Exception("Error stopping recording.");
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
+                                var file = await assetsFolder.GetFileAsync(recordingName);
+                                await _translator.Translate(file.Path);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error("Error retrieving the file after recording and before translation", ex);
+                            }
+
+                            MicrophoneButton.IsEnabled = true;
+                            BusyRing.Visibility = Visibility.Collapsed;
+                            RecordingInfoBar.Message = "The text has been copied to your clipboard.";
+                            await Task.Delay(5000);
+                            RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
+                            return true;
+                        }
+                    });
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("Exception stopping recording.", ex);
             }
         }
 
@@ -191,7 +184,6 @@ namespace Scriptor
             _stoppingAnimationTimer = new DispatcherTimer();
             _stoppingAnimationTimer.Tick += StoppingAnimationTimer_Tick;
 
-            //RecordingGifImage.Visibility = Visibility.Collapsed;
             RecordingGifImage.Opacity = 0;
             BitmapImage recordingBitmapImage = new(new Uri("ms-appx:///Assets/recording.gif"));
             RecordingGifImage.Source = recordingBitmapImage;
@@ -231,30 +223,14 @@ namespace Scriptor
             _talkingToInvisibleAnimation.Duration = TimeSpan.FromSeconds(1);
         }
 
-        //private void SetupRecordTeachingTip()
-        //{
-        //    RecordTeachingTip.IsOpen = true;
-            
-        //    // Initialize the timer
-        //    _teachingTipTimer = new DispatcherTimer();
-        //    _teachingTipTimer.Tick += TeachingTipTimer_Tick;
-        //    _teachingTipTimer.Interval = TimeSpan.FromSeconds(5);
-        //    _teachingTipTimer.Start();
-        //}
-
-        //private void TeachingTipTimer_Tick(object sender, object e)
-        //{
-        //    // Stop the timer
-        //    _teachingTipTimer.Stop();
-        //    RecordTeachingTip.IsOpen = false;
-        //}
-
         private bool TrySetMicaBackdrop()
         {
             if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
             {
-                Microsoft.UI.Xaml.Media.MicaBackdrop micaBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
-                micaBackdrop.Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.Base;
+                MicaBackdrop micaBackdrop = new()
+                {
+                    Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.Base
+                };
                 this.SystemBackdrop = micaBackdrop;
 
                 return true; // Succeeded.
