@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Net.Http;
 using log4net;
+using OpenAI.Audio;
 
 
 namespace Scriptor.Services
@@ -30,18 +31,16 @@ namespace Scriptor.Services
             try
             {
                 var resourceContent = _resourceManager.GetResourceContent("Scriptor.Assets.scriptor-api.txt");
-                //AudioClient client = new("whisper-1", resourceContent);
+                AudioClient client = new("whisper-1", resourceContent);
 
-                //AudioTranscriptionOptions options = new()
-                //{
-                //    ResponseFormat = AudioTranscriptionFormat.Verbose,
-                //    TimestampGranularities = AudioTimestampGranularities.Word | AudioTimestampGranularities.Segment,
-                //};
+                AudioTranslationOptions options = new()
+                {
+                    ResponseFormat = AudioTranslationFormat.Verbose,
+                    Prompt = "Medical notes. Doctor Summary. The doctor is speaking."
+                };
 
-                //var transcription = await client.TranscribeAudioAsync(filePath, options);
-                //return transcription.Value.Text;
-                await Task.Delay(1000);
-                return "Hello";
+                var translation = await client.TranslateAudioAsync(filePath, options);
+                return translation.Value.Text;
             }
             catch (Exception ex)
             {

@@ -15,7 +15,6 @@ namespace Scriptor
     public partial class App : Application
     {
         public static IServiceProvider ServiceProvider { get; private set; }
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(App));
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -34,14 +33,12 @@ namespace Scriptor
 
         private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
-            Logger.Error("Unhandled exception occurred", e.Exception);
-            LogManager.Shutdown(); // Flush and shutdown log4net
+            LogManager.Shutdown(); // Flush and shutdown log
         }
 
         // Handle window closure to flush and shutdown log4net
         private void OnWindowClosed(object sender, Microsoft.UI.Xaml.WindowEventArgs e)
         {
-            Logger.Info("Application is closing");
             LogManager.Shutdown();  // Flush logs and shut down log4net
         }
 

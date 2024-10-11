@@ -13,6 +13,7 @@ using Polly.Retry;
 using Polly;
 using Windows.Storage;
 using log4net;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace Scriptor
 {
@@ -117,7 +118,8 @@ namespace Scriptor
                             {
                                 var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
                                 var file = await assetsFolder.GetFileAsync(recordingName);
-                                await _translator.Translate(file.Path);
+                                var translation = await _translator.Translate(file.Path);
+                                this.CopyTextToClipboard(translation);
                             }
                             catch (Exception ex)
                             {
@@ -140,6 +142,13 @@ namespace Scriptor
             }
         }
 
+        private void CopyTextToClipboard(string textToCopy)
+        {
+            DataPackage dataPackage = new();
+            dataPackage.SetText(textToCopy);
+            Clipboard.SetContent(dataPackage);
+        }
+
         private void RecordingAnimationTimer_Tick(object sender, object e)
         {
             // Stop the timer
@@ -159,7 +168,6 @@ namespace Scriptor
             // Stop the timer
             _stoppingAnimationTimer.Stop();
 
-            //MicrophoneButton.IsEnabled = true;
             ButtonIcon.Glyph = "\uE720"; // Microphone icon
             ButtonIcon.Foreground = new SolidColorBrush(Colors.DarkBlue);
             ToolTipService.SetToolTip(MicrophoneButton, "Press to start recording!");
