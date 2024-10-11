@@ -30,17 +30,19 @@ namespace Scriptor.Services
             _logger.Info("Translating recording");
             try
             {
-                var resourceContent = _resourceManager.GetResourceContent("Scriptor.Assets.scriptor-api.txt");
-                AudioClient client = new("whisper-1", resourceContent);
+                //var resourceContent = _resourceManager.GetResourceContent("Scriptor.Assets.scriptor-api.txt");
+                //AudioClient client = new("whisper-1", resourceContent);
 
-                AudioTranslationOptions options = new()
-                {
-                    ResponseFormat = AudioTranslationFormat.Verbose,
-                    Prompt = "Medical notes. Doctor Summary. The doctor is speaking."
-                };
+                //AudioTranslationOptions options = new()
+                //{
+                //    ResponseFormat = AudioTranslationFormat.Verbose,
+                //    Prompt = "Medical notes. Doctor Summary. The doctor is speaking."
+                //};
 
-                var translation = await client.TranslateAudioAsync(filePath, options);
-                return translation.Value.Text;
+                //var translation = await client.TranslateAudioAsync(filePath, options);
+                //return translation.Value.Text;
+                await Task.Delay(2000);
+                return string.Empty;
             }
             catch (Exception ex)
             {

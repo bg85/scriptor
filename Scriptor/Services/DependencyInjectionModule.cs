@@ -13,6 +13,7 @@ namespace Scriptor.Services
             services.AddSingleton<IResourceManager, ResourceManager>();
             services.AddSingleton<IVoiceRecorder, VoiceRecorder>();
             services.AddSingleton<ITranslator, Translator>();
+            services.AddSingleton<IAnimator, Animator>();
 
             // Initialize log4net for cloud logging
             string credentialsPath = Path.Combine(AppContext.BaseDirectory, "Assets", "scriptor-client.json");
