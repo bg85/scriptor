@@ -9,15 +9,15 @@
   IgnorableNamespaces="uap rescap uap3">
 
   <Identity
-    Name="586fcc97-b37e-4883-a562-828a79bf47b1"
-    Publisher="CN=bgper"
-    Version="1.0.0.0" />
+    Name="pereda.ScriptorABC"
+    Publisher="CN=0D4D0DDD-A8C9-49D0-9C90-20258970371A"
+    Version="1.0.2.0" />
 
-  <mp:PhoneIdentity PhoneProductId="586fcc97-b37e-4883-a562-828a79bf47b1" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="6e0c7865-3e62-48d0-807f-c177987565bf" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Scriptor</DisplayName>
-    <PublisherDisplayName>bgper</PublisherDisplayName>
+    <DisplayName>ScriptorABC</DisplayName>
+    <PublisherDisplayName>pereda</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -35,7 +35,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Scriptor"
+        DisplayName="ScriptorABC"
         Description="Scriptor"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
@@ -48,7 +48,6 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
-    <uap3:Capability Name="backgroundMediaPlayback"/>
     <DeviceCapability Name="microphone"/>
   </Capabilities>
 </Package>

@@ -1,5 +1,6 @@
 ﻿using log4net;
 using System;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using Windows.Media.Capture;
 using Windows.Media.MediaProperties;
@@ -20,7 +21,10 @@ namespace Scriptor.Services
         private string _fileName;
         private ILog _logger;
 
-        public VoiceRecorder(ILog logger) => _logger = logger;
+        public VoiceRecorder(ILog logger)
+        {
+            _logger = logger;
+        }
 
         private async Task InitializeMediaCaptureAsync()
         {
@@ -36,7 +40,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                _logger.Error("Unable to Initialize media capture object.", ex);
+                _logger.Error($"Unable to Initialize media capture object for client: {WindowsIdentity.GetCurrent().Name}", ex);
             }
         }
 
@@ -55,7 +59,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                _logger.Error($"Failed to start recording: {ex}", ex);
+                _logger.Error($"Failed to start recording for client: {WindowsIdentity.GetCurrent().Name}", ex);
                 return false;
             }
         }
@@ -69,7 +73,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                _logger.Error($"Failed to stop recording: {ex}", ex);
+                _logger.Error($"Failed to stop recording for client: {WindowsIdentity.GetCurrent().Name}", ex);
                 return null;
             }
         }

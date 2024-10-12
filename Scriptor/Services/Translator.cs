@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using log4net;
 using OpenAI.Audio;
+using Polly;
+using System.Security.Principal;
 
 
 namespace Scriptor.Services
@@ -27,28 +29,44 @@ namespace Scriptor.Services
 
         public async Task<string> Translate(string filePath)
         {
-            _logger.Info("Translating recording");
-            try
-            {
-                //var resourceContent = _resourceManager.GetResourceContent("Scriptor.Assets.scriptor-api.txt");
-                //AudioClient client = new("whisper-1", resourceContent);
+            var retryPolicy = Policy.Handle<Exception>()
+                     .WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
-                //AudioTranslationOptions options = new()
-                //{
-                //    ResponseFormat = AudioTranslationFormat.Verbose,
-                //    Prompt = "Medical notes. Doctor Summary. The doctor is speaking."
-                //};
+            _logger.Info($"Translating recording for client: {WindowsIdentity.GetCurrent().Name}");
 
-                //var translation = await client.TranslateAudioAsync(filePath, options);
-                //return translation.Value.Text;
-                await Task.Delay(2000);
-                return string.Empty;
-            }
-            catch (Exception ex)
+            var translation = string.Empty;
+
+            var retryResult = await retryPolicy.Execute(async () =>
             {
-                _logger.Error("Unable to translate recording", ex);
-                return string.Empty;
+                try
+                {
+                    var resourceContent = _resourceManager.GetResourceContent("Scriptor.Assets.scriptor-api.txt");
+                    AudioClient client = new("whisper-1", resourceContent);
+
+                    AudioTranslationOptions options = new()
+                    {
+                        ResponseFormat = AudioTranslationFormat.Verbose,
+                        Prompt = "The audio is from a doctor explaining why a patient is coming for a consultation. The doctor describes the patient's current symptoms and provides relevant medical history. Translate this narration to english simplifying the language and summarizing. Use medical terms and diagnosis if needed. Focus on conveying the main symptoms, reasons for the consultation, and key points from the medical history. Avoid unnecessary details"
+                    };
+
+                    var translationResult = await client.TranslateAudioAsync(filePath, options);
+                    translation = translationResult.Value.Text;
+                    //await Task.Delay(5000);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Unable to translate recording for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                    throw;
+                }
+            });
+
+            if (!retryResult)
+            {
+                _logger.Info($"Translation retries exhausted for client: {WindowsIdentity.GetCurrent().Name}");
             }
+
+            return translation;
         }
     }
 }

@@ -7,7 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:foundation="using:Windows.Foundation"
     mc:Ignorable="d">
-    <Grid VerticalAlignment="Center" HorizontalAlignment="Left">
+    <Grid x:Name="MainGrid" VerticalAlignment="Center" HorizontalAlignment="Left">
         <Grid.RowDefinitions>
             <RowDefinition Height="120"/>
             <RowDefinition Height="Auto"/>
@@ -22,12 +22,16 @@
                 <FontIcon x:Name="ButtonIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="36" Foreground="DarkBlue" />
             </Button.Content>
         </Button>
-        <ProgressRing x:Name="BusyRing" IsActive="True" Background="LightGray" Height="100" Width="100" Visibility="Collapsed"/>
-        <!--<TeachingTip x:Name="RecordTeachingTip"
-            Target="{x:Bind MicrophoneButton}"
-            Title="Start Recording"
-            Subtitle="Press button to start recording!">
-        </TeachingTip>-->
+        <ProgressRing x:Name="BusyRing" IsActive="True" Background="LightGray" Height="100" Width="100" Opacity="0"/>
+        <TeachingTip x:Name="DoneTeachingTip"
+	        Title="Your translation was copied to clipboard"
+	        Subtitle="Press CTRL+V or RightClick + Paste to paste it."
+	        PreferredPlacement="Auto"
+	        PlacementMargin="20"
+	        IsLightDismissEnabled="True"
+	        CloseButtonClick="DoneTeachingTip_CloseButtonClick"
+	        CloseButtonContent="Got it!">
+        </TeachingTip>
         <InfoBar x:Name="RecordingInfoBar" IsOpen="True" IsIconVisible="True" IsClosable="False" Title="" HorizontalAlignment="Center" VerticalAlignment="Center" Width="Auto" Grid.Row="1" Grid.Column="0" Margin="5,0,5,0" Foreground="RoyalBlue"
             Message="Press the button and start talking. We'll do the rest." />
     </Grid>

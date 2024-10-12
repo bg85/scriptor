@@ -10,6 +10,9 @@ using Windows.Storage;
 using log4net;
 using Windows.ApplicationModel.DataTransfer;
 using Microsoft.UI.Xaml.Media.Imaging;
+using System.Security.Principal;
+using Microsoft.UI.Xaml.Controls;
+using System.Runtime.InteropServices;
 
 namespace Scriptor
 {
@@ -18,6 +21,20 @@ namespace Scriptor
     /// </summary>
     public sealed partial class MainWindow : Window
     {
+        // Define constants for setting small and large icons
+        private const int WM_SETICON = 0x0080;
+        private const int ICON_SMALL = 0;
+        private const int ICON_BIG = 1;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr LoadImage(IntPtr hInstance, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetActiveWindow();
+
         private bool isRecording;
         private readonly RetryPolicy _retryPolicy;
         private readonly IVoiceRecorder _voiceRecorder;
@@ -29,20 +46,42 @@ namespace Scriptor
         {
             this.TryStyleWindow();
             this.InitializeComponent();
+            SetWindowIcon("Assets/mic-icon.ico");
 
             RecordingGifImage.Opacity = 0;
             BitmapImage recordingBitmapImage = new(new Uri("ms-appx:///Assets/recording.gif"));
             RecordingGifImage.Source = recordingBitmapImage;
 
             _retryPolicy = Policy.Handle<Exception>()
-                                 .WaitAndRetry(50, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+                                 .WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
             
             _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
             _translator = App.ServiceProvider.GetRequiredService<ITranslator>();
             _logger = App.ServiceProvider.GetRequiredService<ILog>();
             
             _animator = App.ServiceProvider.GetRequiredService<IAnimator>();
-            _animator.SetupAnimations(this.Compositor, MicrophoneButton, ButtonIcon, RecordingInfoBar, BusyRing, RecordingGifImage);
+            _animator.SetupAnimations(this.Compositor, MicrophoneButton, ButtonIcon, RecordingInfoBar, BusyRing, RecordingGifImage, this.Content.XamlRoot);
+        }
+
+        private void SetWindowIcon(string iconPath)
+        {
+            // Load the small and large icons from the provided .ico file
+            IntPtr hIconSmall = LoadImage(IntPtr.Zero, iconPath, 1 /* IMAGE_ICON */, 16, 16, 0x00000010 /* LR_LOADFROMFILE */);
+            IntPtr hIconBig = LoadImage(IntPtr.Zero, iconPath, 1 /* IMAGE_ICON */, 32, 32, 0x00000010 /* LR_LOADFROMFILE */);
+
+            // Get the current window handle
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+
+            // Set the small icon
+            SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_SMALL, hIconSmall);
+
+            // Set the large icon
+            SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_BIG, hIconBig);
+        }
+
+        private void DoneTeachingTip_CloseButtonClick(TeachingTip sender, object args)
+        {
+            DoneTeachingTip.IsOpen = false;
         }
 
         private async void MicrophoneButton_Click(object sender, RoutedEventArgs e)
@@ -68,14 +107,15 @@ namespace Scriptor
                 var recordingStarted = await _voiceRecorder.StartRecording();
                 if (!recordingStarted)
                 {
-                    _logger.Error($"Recording failed to start for client: {Windows.System.Profile.SystemIdentification.GetSystemIdForPublisher()}");
+                    _logger.Error($"Recording failed to start for client: {WindowsIdentity.GetCurrent().Name}");
                     RecordingInfoBar.Message = "Recording failed to start. Please try again.";
                     await this.StopRecording(true);
                 }
             }
             catch (Exception ex) 
             {
-                _logger.Error("Exception starting recording.", ex);
+                _logger.Error($"Exception starting recording.for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                MicrophoneButton.IsEnabled = true;
             }
         }
 
@@ -84,50 +124,61 @@ namespace Scriptor
             try
             {
                 this.isRecording = !this.isRecording;
-                MicrophoneButton.IsEnabled = false;
                 _animator.AnimateMakeBitmapInvisible();
 
                 if (!withError)
                 {
-                    await _retryPolicy.Execute(async () =>
+                    var retryResult = await _retryPolicy.Execute(async () =>
                     {
                         var recordingName = await _voiceRecorder.StopRecording();
                         if (recordingName == null)
                         {
-                            _logger.Error("Error stopping recording.");
-                            throw new Exception("Error stopping recording.");
+                            _logger.Error($"Error stopping recording for client: {WindowsIdentity.GetCurrent().Name}");
+                            throw new Exception($"Error stopping recording for client: {WindowsIdentity.GetCurrent().Name}");
                         }
                         else
                         {
                             try
                             {
+                                _animator.AnimateMakeBusyVisible();
                                 var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
                                 var file = await assetsFolder.GetFileAsync(recordingName);
                                 var translation = await _translator.Translate(file.Path);
-                                this.CopyTextToClipboard(translation);
+                                CopyTextToClipboard(translation);
                             }
                             catch (Exception ex)
                             {
-                                _logger.Error("Error retrieving the file after recording and before translation", ex);
+                                _logger.Error($"Error retrieving the file after recording and before translation for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                                throw;
+                            }
+                            finally
+                            {
+                                _animator.AnimateMakeBusyInvisible(() => DoneTeachingTip.IsOpen = true);
                             }
 
                             MicrophoneButton.IsEnabled = true;
-                            BusyRing.Visibility = Visibility.Collapsed;
-                            RecordingInfoBar.Message = "The text has been copied to your clipboard.";
-                            await Task.Delay(5000);
                             RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
                             return true;
                         }
                     });
+
+                    if (!retryResult)
+                    {
+                        RecordingInfoBar.Message = "Sorry, there was an error. Please try again.";
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error("Exception stopping recording.", ex);
+                _logger.Error($"Exception stopping recording for client: {WindowsIdentity.GetCurrent().Name}", ex);
+            }
+            finally
+            {
+                MicrophoneButton.IsEnabled = true;
             }
         }
 
-        private void CopyTextToClipboard(string textToCopy)
+        private static void CopyTextToClipboard(string textToCopy)
         {
             DataPackage dataPackage = new();
             dataPackage.SetText(textToCopy);
@@ -147,10 +198,10 @@ namespace Scriptor
                 };
                 this.SystemBackdrop = micaBackdrop;
 
-                return true; // Succeeded.
+                return true;
             }
 
-            return false; // Mica is not supported on this system.
+            return false;
         }
     }
 }
