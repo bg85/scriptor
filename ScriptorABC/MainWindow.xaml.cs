@@ -8,6 +8,7 @@ using Polly;
 using Polly.Retry;
 using ScriptorABC.Services;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
@@ -28,6 +29,8 @@ namespace ScriptorABC
         private readonly ITranslator _translator;
         private readonly ILog _logger;
         private readonly IAnimator _animator;
+        private readonly IJanitor _janitor;
+        private readonly Thread _janitorThread;
 
         public MainWindow()
         {
@@ -47,6 +50,12 @@ namespace ScriptorABC
 
             _animator = App.ServiceProvider.GetRequiredService<IAnimator>();
             _animator.SetupAnimations(this.Compositor, MicrophoneButton, ButtonIcon, RecordingInfoBar, BusyRing, RecordingGifImage, this.Content.XamlRoot);
+
+            _janitor = App.ServiceProvider.GetRequiredService<IJanitor>();
+            _janitorThread = new Thread(() => { 
+                _janitor.CleanOlderFiles();
+            });
+            _janitorThread.Start();
         }
 
         private void DoneTeachingTip_CloseButtonClick(TeachingTip sender, object args)

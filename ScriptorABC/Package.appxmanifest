@@ -8,15 +8,15 @@
   IgnorableNamespaces="uap rescap">
 
   <Identity
-    Name="b087a27e-004b-4995-8c64-eacce79b7f7a"
-    Publisher="CN=bgper"
-    Version="1.0.0.0" />
+    Name="pereda.ScriptorABC"
+    Publisher="CN=0D4D0DDD-A8C9-49D0-9C90-20258970371A"
+    Version="1.0.1.0" />
 
-  <mp:PhoneIdentity PhoneProductId="b087a27e-004b-4995-8c64-eacce79b7f7a" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="5fd13c2b-e036-4fc4-bf6d-48c6feae6eee" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>ScriptorABC</DisplayName>
-    <PublisherDisplayName>bgper</PublisherDisplayName>
+    <PublisherDisplayName>pereda</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
