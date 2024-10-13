@@ -6,9 +6,10 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI;
 
-namespace Scriptor.Services
+namespace ScriptorABC.Services
 {
-    public interface IAnimator {
+    public interface IAnimator
+    {
         void AnimateButtonToTheRight();
         void AnimateButtonToTheLeft();
         void AnimateMakeBitmapVisible();
@@ -42,7 +43,7 @@ namespace Scriptor.Services
         public void AnimateButtonToTheRight()
         {
             var transformMatrix = _buttonVisual.TransformMatrix;
-            float originalX = (float)transformMatrix.M31; // Current X position of the button
+            float originalX = transformMatrix.M31; // Current X position of the button
             float marginLeft = (float)_microphoneButton.Margin.Left; // Margin on the left
 
             float startX = originalX + marginLeft; // Adjusted starting position considering padding
@@ -61,7 +62,7 @@ namespace Scriptor.Services
         public void AnimateButtonToTheLeft()
         {
             var transformMatrix = _buttonVisual.TransformMatrix;
-            float originalX = (float)transformMatrix.M31; // Current X position of the button
+            float originalX = transformMatrix.M31; // Current X position of the button
             float marginLeft = (float)_microphoneButton.Margin.Left; // Margin on the left
 
             float startX = originalX + marginLeft; // Adjusted starting position considering padding
@@ -95,9 +96,9 @@ namespace Scriptor.Services
             _recordingBitmapVisual.StartAnimation("Opacity", talkingToInvisibleAnimation);
         }
 
-        public void SetupAnimations(Compositor compositor, 
-            Button microphoneButton, 
-            FontIcon buttonIcon, 
+        public void SetupAnimations(Compositor compositor,
+            Button microphoneButton,
+            FontIcon buttonIcon,
             InfoBar recordingInfoBar,
             ProgressRing progressRing,
             Image recordingGifImage,
@@ -139,7 +140,7 @@ namespace Scriptor.Services
             _buttonIcon.Foreground = new SolidColorBrush(Colors.DarkBlue);
             ToolTipService.SetToolTip(_microphoneButton, "Press to start recording!");
             _recordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
-            this.AnimateButtonToTheLeft();
+            AnimateButtonToTheLeft();
 
             var busyToInvisibleAnimation = _compositor.CreateScalarKeyFrameAnimation();
             busyToInvisibleAnimation.InsertKeyFrame(0f, 1f); // Start as fully visible
@@ -160,7 +161,7 @@ namespace Scriptor.Services
             ToolTipService.SetToolTip(_microphoneButton, "Press to stop recording!");
             _recordingInfoBar.Message = "We are listening. Press the button to stop recording.";
 
-            this.AnimateMakeBitmapVisible();
+            AnimateMakeBitmapVisible();
         }
     }
 }

@@ -1,14 +1,14 @@
 ﻿using log4net;
 using System;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using Windows.Media.Capture;
 using Windows.Media.MediaProperties;
 using Windows.Storage;
 
-namespace Scriptor.Services
+namespace ScriptorABC.Services
 {
-    public interface IVoiceRecorder {
+    public interface IVoiceRecorder
+    {
         bool IsReady { get; }
         Task<bool> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium);
         Task<string> StopRecording();
@@ -40,7 +40,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                _logger.Error($"Unable to Initialize media capture object for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                _logger.Error("Unable to Initialize media capture object.", ex);
             }
         }
 
@@ -48,18 +48,19 @@ namespace Scriptor.Services
 
         public async Task<bool> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium)
         {
-            try {
+            try
+            {
                 _storageFolder = await ApplicationData.Current.LocalFolder.CreateFolderAsync("Recordings", CreationCollisionOption.OpenIfExists);
                 var file = await _storageFolder.CreateFileAsync($"{Guid.NewGuid().ToString()}.mp3", CreationCollisionOption.GenerateUniqueName);
                 _fileName = file.Name;
 
-                await this.InitializeMediaCaptureAsync();
+                await InitializeMediaCaptureAsync();
                 await _mediaCapture.StartRecordToStorageFileAsync(MediaEncodingProfile.CreateMp3(encodingQuality), file);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.Error($"Failed to start recording for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                _logger.Error("Failed to start recording.", ex);
                 return false;
             }
         }
@@ -73,7 +74,7 @@ namespace Scriptor.Services
             }
             catch (Exception ex)
             {
-                _logger.Error($"Failed to stop recording for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                _logger.Error("Failed to stop recording.", ex);
                 return null;
             }
         }

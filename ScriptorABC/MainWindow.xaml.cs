@@ -1,40 +1,27 @@
-using Microsoft.UI.Xaml;
-using System;
-using Microsoft.UI.Xaml.Media;
-using Scriptor.Services;
-using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
-using Polly.Retry;
-using Polly;
-using Windows.Storage;
 using log4net;
-using Windows.ApplicationModel.DataTransfer;
-using Microsoft.UI.Xaml.Media.Imaging;
-using System.Security.Principal;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using System.Runtime.InteropServices;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Polly;
+using Polly.Retry;
+using ScriptorABC.Services;
+using System;
+using System.Threading.Tasks;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage;
 
-namespace Scriptor
+// To learn more about WinUI, the WinUI project structure,
+// and more about our project templates, see: http://aka.ms/winui-project-info.
+
+namespace ScriptorABC
 {
     /// <summary>
     /// An empty window that can be used on its own or navigated to within a Frame.
     /// </summary>
     public sealed partial class MainWindow : Window
     {
-        // Define constants for setting small and large icons
-        private const int WM_SETICON = 0x0080;
-        private const int ICON_SMALL = 0;
-        private const int ICON_BIG = 1;
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr LoadImage(IntPtr hInstance, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetActiveWindow();
-
         private bool isRecording;
         private readonly RetryPolicy _retryPolicy;
         private readonly IVoiceRecorder _voiceRecorder;
@@ -46,7 +33,6 @@ namespace Scriptor
         {
             this.TryStyleWindow();
             this.InitializeComponent();
-            SetWindowIcon("Assets/mic-icon.ico");
 
             RecordingGifImage.Opacity = 0;
             BitmapImage recordingBitmapImage = new(new Uri("ms-appx:///Assets/recording.gif"));
@@ -54,29 +40,13 @@ namespace Scriptor
 
             _retryPolicy = Policy.Handle<Exception>()
                                  .WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
-            
+
             _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
             _translator = App.ServiceProvider.GetRequiredService<ITranslator>();
             _logger = App.ServiceProvider.GetRequiredService<ILog>();
-            
+
             _animator = App.ServiceProvider.GetRequiredService<IAnimator>();
             _animator.SetupAnimations(this.Compositor, MicrophoneButton, ButtonIcon, RecordingInfoBar, BusyRing, RecordingGifImage, this.Content.XamlRoot);
-        }
-
-        private void SetWindowIcon(string iconPath)
-        {
-            // Load the small and large icons from the provided .ico file
-            IntPtr hIconSmall = LoadImage(IntPtr.Zero, iconPath, 1 /* IMAGE_ICON */, 16, 16, 0x00000010 /* LR_LOADFROMFILE */);
-            IntPtr hIconBig = LoadImage(IntPtr.Zero, iconPath, 1 /* IMAGE_ICON */, 32, 32, 0x00000010 /* LR_LOADFROMFILE */);
-
-            // Get the current window handle
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-
-            // Set the small icon
-            SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_SMALL, hIconSmall);
-
-            // Set the large icon
-            SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_BIG, hIconBig);
         }
 
         private void DoneTeachingTip_CloseButtonClick(TeachingTip sender, object args)
@@ -107,14 +77,14 @@ namespace Scriptor
                 var recordingStarted = await _voiceRecorder.StartRecording();
                 if (!recordingStarted)
                 {
-                    _logger.Error($"Recording failed to start for client: {WindowsIdentity.GetCurrent().Name}");
+                    _logger.Error("Recording failed to start.");
                     RecordingInfoBar.Message = "Recording failed to start. Please try again.";
                     await this.StopRecording(true);
                 }
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                _logger.Error($"Exception starting recording.for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                _logger.Error("Exception starting recording.", ex);
                 MicrophoneButton.IsEnabled = true;
             }
         }
@@ -133,8 +103,8 @@ namespace Scriptor
                         var recordingName = await _voiceRecorder.StopRecording();
                         if (recordingName == null)
                         {
-                            _logger.Error($"Error stopping recording for client: {WindowsIdentity.GetCurrent().Name}");
-                            throw new Exception($"Error stopping recording for client: {WindowsIdentity.GetCurrent().Name}");
+                            _logger.Error("Error stopping recording.");
+                            throw new Exception("Error stopping recording.");
                         }
                         else
                         {
@@ -148,7 +118,7 @@ namespace Scriptor
                             }
                             catch (Exception ex)
                             {
-                                _logger.Error($"Error retrieving the file after recording and before translation for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                                _logger.Error("Error retrieving the file after recording and before translation.", ex);
                                 throw;
                             }
                             finally
@@ -170,7 +140,7 @@ namespace Scriptor
             }
             catch (Exception ex)
             {
-                _logger.Error($"Exception stopping recording for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                _logger.Error("Exception stopping recording.", ex);
             }
             finally
             {

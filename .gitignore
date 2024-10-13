@@ -397,5 +397,5 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
-/Scriptor/Assets/scriptor-api.txt
-/Scriptor/Assets/scriptor-client.json
+/ScriptorABC/Assets/scriptor-api.txt
+/ScriptorABC/Assets/scriptor-client.json

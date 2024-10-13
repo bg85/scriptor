@@ -5,19 +5,18 @@
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
-  IgnorableNamespaces="uap rescap uap3">
+  IgnorableNamespaces="uap rescap">
 
   <Identity
-    Name="pereda.ScriptorABC"
-    Publisher="CN=0D4D0DDD-A8C9-49D0-9C90-20258970371A"
-    Version="1.0.2.0" />
+    Name="b087a27e-004b-4995-8c64-eacce79b7f7a"
+    Publisher="CN=bgper"
+    Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="6e0c7865-3e62-48d0-807f-c177987565bf" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="b087a27e-004b-4995-8c64-eacce79b7f7a" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>ScriptorABC</DisplayName>
-    <PublisherDisplayName>pereda</PublisherDisplayName>
+    <PublisherDisplayName>bgper</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -36,11 +35,11 @@
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
         DisplayName="ScriptorABC"
-        Description="Scriptor"
+        Description="ScriptorABC"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"  Square71x71Logo="Assets\mic-icon-88.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
     </Application>

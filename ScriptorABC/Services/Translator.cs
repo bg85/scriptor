@@ -4,10 +4,9 @@ using System.Net.Http;
 using log4net;
 using OpenAI.Audio;
 using Polly;
-using System.Security.Principal;
 
 
-namespace Scriptor.Services
+namespace ScriptorABC.Services
 {
     public interface ITranslator
     {
@@ -32,7 +31,7 @@ namespace Scriptor.Services
             var retryPolicy = Policy.Handle<Exception>()
                      .WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
-            _logger.Info($"Translating recording for client: {WindowsIdentity.GetCurrent().Name}");
+            _logger.Info($"Translating recording.");
 
             var translation = string.Empty;
 
@@ -40,7 +39,7 @@ namespace Scriptor.Services
             {
                 try
                 {
-                    var resourceContent = _resourceManager.GetResourceContent("Scriptor.Assets.scriptor-api.txt");
+                    var resourceContent = _resourceManager.GetResourceContent("ScriptorABC.Assets.scriptor-api.txt");
                     AudioClient client = new("whisper-1", resourceContent);
 
                     AudioTranslationOptions options = new()
@@ -56,14 +55,14 @@ namespace Scriptor.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error($"Unable to translate recording for client: {WindowsIdentity.GetCurrent().Name}", ex);
+                    _logger.Error($"Unable to translate recording.", ex);
                     throw;
                 }
             });
 
             if (!retryResult)
             {
-                _logger.Info($"Translation retries exhausted for client: {WindowsIdentity.GetCurrent().Name}");
+                _logger.Info($"Translation retries exhausted.");
             }
 
             return translation;

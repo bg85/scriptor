@@ -1,9 +1,9 @@
 {
   "profiles": {
-    "Scriptor (Package)": {
+    "ScriptorABC (Package)": {
       "commandName": "MsixPackage"
     },
-    "Scriptor (Unpackaged)": {
+    "ScriptorABC (Unpackaged)": {
       "commandName": "Project"
     }
   }

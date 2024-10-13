@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace Scriptor.Services
+namespace ScriptorABC.Services
 {
     public interface IResourceManager
     {
@@ -15,7 +15,7 @@ namespace Scriptor.Services
         private ILog _logger;
 
         public ResourceManager(ILog logger)
-        { 
+        {
             _logger = logger;
         }
 

@@ -3,9 +3,8 @@ using log4net;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using System;
-using System.Security.Principal;
 
-namespace Scriptor.Services
+namespace ScriptorABC.Services
 {
     public class DependencyInjectionModule
     {
@@ -23,7 +22,7 @@ namespace Scriptor.Services
 
             ILog logger = LogManager.GetLogger(typeof(Program));
             services.AddSingleton<ILog>(logger);
-            logger.Info($"Starting Scriptor for user: {WindowsIdentity.GetCurrent().Name}");
+            logger.Info("Starting Scriptor");
         }
 
         // Used this function to troubleshoot issue writting to Google Cloud Logs
