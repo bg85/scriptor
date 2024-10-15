@@ -31,7 +31,7 @@ namespace ScriptorABC.Services
             var retryPolicy = Policy.Handle<Exception>()
                      .WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
-            _logger.Info($"Translating recording.");
+            _logger.Info("Translating recording.");
 
             var translation = string.Empty;
 
@@ -55,14 +55,14 @@ namespace ScriptorABC.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error($"Unable to translate recording.", ex);
+                    _logger.Error("Unable to translate recording.", ex);
                     throw;
                 }
             });
 
             if (!retryResult)
             {
-                _logger.Info($"Translation retries exhausted.");
+                _logger.Info("Translation retries exhausted.");
             }
 
             return translation;
