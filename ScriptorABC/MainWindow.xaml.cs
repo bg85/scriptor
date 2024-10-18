@@ -24,8 +24,8 @@ namespace ScriptorABC
     public sealed partial class MainWindow : Window
     {
         private bool isRecording;
-        private readonly RetryPolicy _recordingRetryPolicy;
-        private readonly RetryPolicy _subscriptionRetryPolicy;
+        private readonly AsyncRetryPolicy _recordingRetryPolicy;
+        private readonly AsyncRetryPolicy _subscriptionRetryPolicy;
         private readonly IVoiceRecorder _voiceRecorder;
         private readonly ITranslator _translator;
         private readonly ILog _logger;
@@ -34,6 +34,7 @@ namespace ScriptorABC
         private readonly Thread _janitorThread;
         private readonly IClerk _clerk;
         private bool _isSubscriptionActive;
+        private bool _purchasingSubscription;
 
         public MainWindow()
         {
@@ -44,9 +45,17 @@ namespace ScriptorABC
             BitmapImage recordingBitmapImage = new(new Uri("ms-appx:///Assets/recording.gif"));
             RecordingGifImage.Source = recordingBitmapImage;
 
-            _recordingRetryPolicy = Policy.Handle<Exception>().WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+            _recordingRetryPolicy = Policy.Handle<Exception>().WaitAndRetryAsync(
+                3,
+                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (exception, retryCount, context) => _logger.Error($"Retry for recording {retryCount} due to {exception.GetType().Name}: {exception.Message}")
+            );
 
-            _subscriptionRetryPolicy = Policy.Handle<Exception>().WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+            _subscriptionRetryPolicy = Policy.Handle<Exception>().WaitAndRetryAsync(
+                3, 
+                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (exception, retryCount, context) => _logger.Error($"Retry for subscription {retryCount} due to {exception.GetType().Name}: {exception.Message}")
+            );
 
             _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
             _translator = App.ServiceProvider.GetRequiredService<ITranslator>();
@@ -125,12 +134,13 @@ namespace ScriptorABC
 
                 if (!withError)
                 {
-                    var retryResult = await _recordingRetryPolicy.Execute(async () =>
+                    var retryResult = false;
+                    await _recordingRetryPolicy.ExecuteAsync(async () =>
                     {
                         var recordingName = await _voiceRecorder.StopRecording();
                         if (recordingName == null)
                         {
-                            _logger.Error("Error stopping recording.");
+                            _logger.Error("Error stopping recording. Recordig name cannot be null.");
                             throw new Exception("Error stopping recording.");
                         }
                         else
@@ -155,7 +165,7 @@ namespace ScriptorABC
 
                             MicrophoneButton.IsEnabled = true;
                             RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
-                            return true;
+                            retryResult = true;
                         }
                     });
 
@@ -203,14 +213,20 @@ namespace ScriptorABC
 
         private async void SubscriptionTeachingTip_ActionButtonClick(TeachingTip sender, object args)
         {
+            if (_purchasingSubscription)
+                return;
+
             try
             {
+                _purchasingSubscription = true;
                 SubscriptionTeachingTip.IsEnabled = false;
-                var retryResult = await _subscriptionRetryPolicy.Execute(async () =>
+                var retryResult = false;
+                await _subscriptionRetryPolicy.ExecuteAsync(async () =>
                 {
                     _logger.Info("Purchasing subscription.");
                     var purchaseResult = await _clerk.PurchaseLicense();
-                    return true;
+
+                    retryResult = true;
                 });
 
                 if (retryResult)
@@ -231,6 +247,10 @@ namespace ScriptorABC
             catch (Exception ex)
             {
                 this.SetubscriptionPurchaseError(ex);
+            }
+            finally
+            {
+                _purchasingSubscription = false;
             }
         }
 
