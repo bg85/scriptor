@@ -34,5 +34,16 @@
         </TeachingTip>
         <InfoBar x:Name="RecordingInfoBar" IsOpen="True" IsIconVisible="True" IsClosable="False" Title="" HorizontalAlignment="Center" VerticalAlignment="Center" Width="Auto" Grid.Row="1" Grid.Column="0" Margin="5,0,5,0" Foreground="RoyalBlue"
             Message="Press the button and start talking. We'll do the rest." />
+        <TeachingTip x:Name="SubscriptionTeachingTip"
+            Title="Sorry, your subscription has expired."
+            Subtitle="Please consider extendind it one more month."
+            PreferredPlacement="Auto"
+            PlacementMargin="0"
+            IsLightDismissEnabled="False"
+            ActionButtonContent="Purchase Lincense"
+            ActionButtonClick="SubscriptionTeachingTip_ActionButtonClick"
+            CloseButtonContent="Exit Application"
+            CloseButtonClick="SubscriptionTeachingTip_CloseButtonClick">
+        </TeachingTip>
     </Grid>
 </Window>

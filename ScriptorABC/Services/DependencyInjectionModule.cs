@@ -15,6 +15,7 @@ namespace ScriptorABC.Services
             services.AddSingleton<ITranslator, Translator>();
             services.AddSingleton<IAnimator, Animator>();
             services.AddSingleton<IJanitor, Janitor>();
+            services.AddSingleton<IClerk, Clerk>();
 
             string credentialsPath = Path.Combine(AppContext.BaseDirectory, "Assets", "scriptor-client.json");
             string configPath = Path.Combine(AppContext.BaseDirectory, "log4net.xml");

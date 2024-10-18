@@ -24,13 +24,16 @@ namespace ScriptorABC
     public sealed partial class MainWindow : Window
     {
         private bool isRecording;
-        private readonly RetryPolicy _retryPolicy;
+        private readonly RetryPolicy _recordingRetryPolicy;
+        private readonly RetryPolicy _subscriptionRetryPolicy;
         private readonly IVoiceRecorder _voiceRecorder;
         private readonly ITranslator _translator;
         private readonly ILog _logger;
         private readonly IAnimator _animator;
         private readonly IJanitor _janitor;
         private readonly Thread _janitorThread;
+        private readonly IClerk _clerk;
+        private bool _isSubscriptionActive;
 
         public MainWindow()
         {
@@ -41,8 +44,9 @@ namespace ScriptorABC
             BitmapImage recordingBitmapImage = new(new Uri("ms-appx:///Assets/recording.gif"));
             RecordingGifImage.Source = recordingBitmapImage;
 
-            _retryPolicy = Policy.Handle<Exception>()
-                                 .WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+            _recordingRetryPolicy = Policy.Handle<Exception>().WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+
+            _subscriptionRetryPolicy = Policy.Handle<Exception>().WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
             _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
             _translator = App.ServiceProvider.GetRequiredService<ITranslator>();
@@ -52,10 +56,24 @@ namespace ScriptorABC
             _animator.SetupAnimations(this.Compositor, MicrophoneButton, ButtonIcon, RecordingInfoBar, BusyRing, RecordingGifImage, this.Content.XamlRoot);
 
             _janitor = App.ServiceProvider.GetRequiredService<IJanitor>();
-            _janitorThread = new Thread(() => { 
-                _janitor.CleanOlderFiles();
+            _janitorThread = new Thread(async () => { 
+                await _janitor.CleanOlderFiles();
             });
             _janitorThread.Start();
+
+            _clerk = App.ServiceProvider.GetRequiredService<IClerk>();
+
+            this.Closed += MainWindow_Closed;
+            if (!_isSubscriptionActive && !_clerk.IsSubscriptionActive().ConfigureAwait(false).GetAwaiter().GetResult())
+            {
+                MicrophoneButton.IsEnabled = false;
+                SubscriptionTeachingTip.IsOpen = true;
+            }
+        }
+
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            _janitorThread?.Join();
         }
 
         private void DoneTeachingTip_CloseButtonClick(TeachingTip sender, object args)
@@ -107,7 +125,7 @@ namespace ScriptorABC
 
                 if (!withError)
                 {
-                    var retryResult = await _retryPolicy.Execute(async () =>
+                    var retryResult = await _recordingRetryPolicy.Execute(async () =>
                     {
                         var recordingName = await _voiceRecorder.StopRecording();
                         if (recordingName == null)
@@ -181,6 +199,61 @@ namespace ScriptorABC
             }
 
             return false;
+        }
+
+        private async void SubscriptionTeachingTip_ActionButtonClick(TeachingTip sender, object args)
+        {
+            try
+            {
+                SubscriptionTeachingTip.IsEnabled = false;
+                var retryResult = await _subscriptionRetryPolicy.Execute(async () =>
+                {
+                    _logger.Info("Purchasing subscription.");
+                    var purchaseResult = await _clerk.PurchaseLicense();
+                    return true;
+                });
+
+                if (retryResult)
+                {
+                    SubscriptionTeachingTip.IsEnabled = true;
+                    _isSubscriptionActive = true;
+                    SubscriptionTeachingTip.Title = "Subscription Active";
+                    SubscriptionTeachingTip.Subtitle = "Your subscription has been activated. THANK YOU!";
+                    SubscriptionTeachingTip.ActionButtonContent = null;
+                    MicrophoneButton.IsEnabled = true;
+                    this._logger.Info("Subscription purchased.");
+                }
+                else
+                {
+                    this.SetubscriptionPurchaseError();
+                }
+            }
+            catch (Exception ex)
+            {
+                this.SetubscriptionPurchaseError(ex);
+            }
+        }
+
+        private void SetubscriptionPurchaseError(Exception ex = null)
+        {
+            _logger.Error($"Error purchasing subscription. {(ex != null ? ex.Message : string.Empty)}");
+            SubscriptionTeachingTip.IsEnabled = true;
+            _isSubscriptionActive = false;
+            SubscriptionTeachingTip.Title = "Error purchasing subscription";
+            SubscriptionTeachingTip.Subtitle = "We are unable to purchase a subscription. Please try again later or contact us at scriptorabc@gmail.com";
+            SubscriptionTeachingTip.ActionButtonContent = null;
+        }
+
+        private void SubscriptionTeachingTip_CloseButtonClick(TeachingTip sender, object args)
+        {
+            if (_isSubscriptionActive)
+            {
+                SubscriptionTeachingTip.IsOpen = false;
+            }
+            else
+            {
+                this.Close();
+            }
         }
     }
 }
