@@ -33,7 +33,9 @@ namespace ScriptorABC
         private readonly IJanitor _janitor;
         private readonly Thread _janitorThread;
         private readonly IClerk _clerk;
+        private Thread _subscriptionThread;
         private bool _isSubscriptionActive;
+        private bool _isRequestingSubscriptionInfo;
         private bool _purchasingSubscription;
 
         public MainWindow()
@@ -73,16 +75,34 @@ namespace ScriptorABC
             _clerk = App.ServiceProvider.GetRequiredService<IClerk>();
 
             this.Closed += MainWindow_Closed;
-            if (!_isSubscriptionActive && !_clerk.IsSubscriptionActive().ConfigureAwait(false).GetAwaiter().GetResult())
-            {
-                MicrophoneButton.IsEnabled = false;
-                SubscriptionTeachingTip.IsOpen = true;
-            }
+           
+            _subscriptionThread = new Thread(async () => {
+                try
+                {
+                    _isRequestingSubscriptionInfo = true;
+                    
+                    await _subscriptionRetryPolicy.ExecuteAsync(async () =>
+                    {
+                        _logger.Info("Validating subscription.");
+                        _isSubscriptionActive = await _clerk.IsSubscriptionActive();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    this._logger.Error($"There was an error validating the subscription info. Error: {ex.Message}", ex);
+                }
+                finally
+                { 
+                    _isRequestingSubscriptionInfo = false;
+                }
+            });
+            _subscriptionThread.Start();
         }
 
         private void MainWindow_Closed(object sender, WindowEventArgs args)
         {
             _janitorThread?.Join();
+            _subscriptionThread.Join();
         }
 
         private void DoneTeachingTip_CloseButtonClick(TeachingTip sender, object args)
@@ -98,7 +118,16 @@ namespace ScriptorABC
             }
             else
             {
-                await this.StopRecording();
+                if (!_isRequestingSubscriptionInfo && !_isSubscriptionActive)
+                {
+                    await this.StopRecording(true);
+                    MicrophoneButton.IsEnabled = false;
+                    SubscriptionTeachingTip.IsOpen = true;
+                }
+                else
+                {
+                    await this.StopRecording();
+                }
             }
         }
 

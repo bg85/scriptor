@@ -25,40 +25,31 @@ namespace ScriptorABC.Services
 
         public async Task<bool> IsSubscriptionActive()
         {
-            try
+            if (_context == null)
             {
-                if (_context == null)
-                {
-                    _context = StoreContext.GetDefault();
-                }
+                _context = StoreContext.GetDefault();
+            }
 
-                if (_storeAppLicense == null)
-                {
-                    _storeAppLicense = await _context.GetAppLicenseAsync();
-                }
+            if (_storeAppLicense == null)
+            {
+                _storeAppLicense = await _context.GetAppLicenseAsync();
+            }
 
-                // Check if the customer has the rights to the subscription.
-                foreach (var addOnLicense in _storeAppLicense.AddOnLicenses)
+            // Check if the customer has the rights to the subscription.
+            foreach (var addOnLicense in _storeAppLicense.AddOnLicenses)
+            {
+                StoreLicense license = addOnLicense.Value;
+                if (license.SkuStoreId.StartsWith(subscriptionStoreId))
                 {
-                    StoreLicense license = addOnLicense.Value;
-                    if (license.SkuStoreId.StartsWith(subscriptionStoreId))
+                    if (license.IsActive)
                     {
-                        if (license.IsActive)
-                        {
-                            // The expiration date is available in the license.ExpirationDate property.
-                            return true;
-                        }
+                        // The expiration date is available in the license.ExpirationDate property.
+                        return true;
                     }
                 }
-
-                // The customer does not have a license to the subscription.
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error("Error validating subscription information", ex);
             }
 
+            // The customer does not have a license to the subscription.
             return false;
         }
 
