@@ -192,7 +192,6 @@ namespace ScriptorABC
                                 _animator.AnimateMakeBusyInvisible(() => DoneTeachingTip.IsOpen = true);
                             }
 
-                            MicrophoneButton.IsEnabled = true;
                             RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
                             retryResult = true;
                         }
@@ -223,21 +222,28 @@ namespace ScriptorABC
 
         private bool TryStyleWindow()
         {
-            this.AppWindow.Resize(new Windows.Graphics.SizeInt32(820, 450));
-            this.ExtendsContentIntoTitleBar = true;
-
-            if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
+            try
             {
-                MicaBackdrop micaBackdrop = new()
+                this.AppWindow.Resize(new Windows.Graphics.SizeInt32(820, 450));
+                this.ExtendsContentIntoTitleBar = true;
+
+                if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
                 {
-                    Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.Base
-                };
-                this.SystemBackdrop = micaBackdrop;
+                    MicaBackdrop micaBackdrop = new()
+                    {
+                        Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.Base
+                    };
+                    this.SystemBackdrop = micaBackdrop;
 
-                return true;
+                    return true;
+                }
+
+                return false;
             }
-
-            return false;
+            catch (Exception ex)
+            {
+                this._logger.Error("Exception trying to style the window", ex);
+            }
         }
 
         private async void SubscriptionTeachingTip_ActionButtonClick(TeachingTip sender, object args)
@@ -253,7 +259,7 @@ namespace ScriptorABC
                 await _subscriptionRetryPolicy.ExecuteAsync(async () =>
                 {
                     _logger.Info("Purchasing subscription.");
-                    var purchaseResult = await _clerk.PurchaseLicense();
+                    await _clerk.PurchaseLicense();
 
                     retryResult = true;
                 });
@@ -270,12 +276,12 @@ namespace ScriptorABC
                 }
                 else
                 {
-                    this.SetubscriptionPurchaseError();
+                    this.SetSubscriptionPurchaseError();
                 }
             }
             catch (Exception ex)
             {
-                this.SetubscriptionPurchaseError(ex);
+                this.SetSubscriptionPurchaseError(ex);
             }
             finally
             {
@@ -283,7 +289,7 @@ namespace ScriptorABC
             }
         }
 
-        private void SetubscriptionPurchaseError(Exception ex = null)
+        private void SetSubscriptionPurchaseError(Exception ex = null)
         {
             _logger.Error($"Error purchasing subscription. {(ex != null ? ex.Message : string.Empty)}");
             SubscriptionTeachingTip.IsEnabled = true;

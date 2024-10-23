@@ -10,7 +10,7 @@
   <Identity
     Name="pereda.ScriptorABC"
     Publisher="CN=0D4D0DDD-A8C9-49D0-9C90-20258970371A"
-    Version="1.0.4.0" />
+    Version="1.0.5.0" />
 
   <mp:PhoneIdentity PhoneProductId="5fd13c2b-e036-4fc4-bf6d-48c6feae6eee" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
