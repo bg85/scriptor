@@ -4,8 +4,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Polly;
-using Polly.Retry;
 using ScriptorABC.Services;
 using System;
 using System.Threading;
@@ -24,8 +22,6 @@ namespace ScriptorABC
     public sealed partial class MainWindow : Window
     {
         private bool isRecording;
-        private readonly AsyncRetryPolicy _recordingRetryPolicy;
-        private readonly AsyncRetryPolicy _subscriptionRetryPolicy;
         private readonly IVoiceRecorder _voiceRecorder;
         private readonly ITranslator _translator;
         private readonly ILog _logger;
@@ -47,21 +43,10 @@ namespace ScriptorABC
             BitmapImage recordingBitmapImage = new(new Uri("ms-appx:///Assets/recording.gif"));
             RecordingGifImage.Source = recordingBitmapImage;
 
-            _recordingRetryPolicy = Policy.Handle<Exception>().WaitAndRetryAsync(
-                3,
-                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (exception, retryCount, context) => _logger.Error($"Retry for recording {retryCount} due to {exception.GetType().Name}: {exception.Message}")
-            );
-
-            _subscriptionRetryPolicy = Policy.Handle<Exception>().WaitAndRetryAsync(
-                3, 
-                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (exception, retryCount, context) => _logger.Error($"Retry for subscription {retryCount} due to {exception.GetType().Name}: {exception.Message}")
-            );
-
             _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
             _translator = App.ServiceProvider.GetRequiredService<ITranslator>();
             _logger = App.ServiceProvider.GetRequiredService<ILog>();
+            _clerk = App.ServiceProvider.GetRequiredService<IClerk>();
 
             _animator = App.ServiceProvider.GetRequiredService<IAnimator>();
             _animator.SetupAnimations(this.Compositor, MicrophoneButton, ButtonIcon, RecordingInfoBar, BusyRing, RecordingGifImage, this.Content.XamlRoot);
@@ -71,32 +56,18 @@ namespace ScriptorABC
                 await _janitor.CleanOlderFiles();
             });
             _janitorThread.Start();
-
-            _clerk = App.ServiceProvider.GetRequiredService<IClerk>();
-
-            this.Closed += MainWindow_Closed;
            
             _subscriptionThread = new Thread(async () => {
-                try
-                {
-                    _isRequestingSubscriptionInfo = true;
+                _isRequestingSubscriptionInfo = true;
                     
-                    await _subscriptionRetryPolicy.ExecuteAsync(async () =>
-                    {
-                        _logger.Info("Validating subscription.");
-                        _isSubscriptionActive = await _clerk.IsSubscriptionActive();
-                    });
-                }
-                catch (Exception ex)
-                {
-                    this._logger.Error($"There was an error validating the subscription info. Error: {ex.Message}", ex);
-                }
-                finally
-                { 
-                    _isRequestingSubscriptionInfo = false;
-                }
+                var result = await _clerk.IsSubscriptionActive();
+                _isSubscriptionActive = result.Success && result.Value;
+                
+                _isRequestingSubscriptionInfo = false;
             });
             _subscriptionThread.Start();
+
+            this.Closed += MainWindow_Closed;
         }
 
         private void MainWindow_Closed(object sender, WindowEventArgs args)
@@ -139,10 +110,9 @@ namespace ScriptorABC
                 MicrophoneButton.IsEnabled = false;
                 _animator.AnimateButtonToTheRight();
 
-                var recordingStarted = await _voiceRecorder.StartRecording();
-                if (!recordingStarted)
+                var recordingResult = await _voiceRecorder.StartRecording();
+                if (!recordingResult.Success || !recordingResult.Value)
                 {
-                    _logger.Error("Recording failed to start.");
                     RecordingInfoBar.Message = "Recording failed to start. Please try again.";
                     await this.StopRecording(true);
                 }
@@ -163,49 +133,41 @@ namespace ScriptorABC
 
                 if (!withError)
                 {
-                    var retryResult = false;
-                    await _recordingRetryPolicy.ExecuteAsync(async () =>
+                    var recordingResult = await _voiceRecorder.StopRecording();
+                    if (!recordingResult.Success)
                     {
-                        var recordingName = await _voiceRecorder.StopRecording();
-                        if (recordingName == null)
+                        _logger.Error($"Error stopping recording. {recordingResult.Message}");
+                    }
+                    else
+                    {
+                        _animator.AnimateMakeBusyVisible();
+                        var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
+                        var file = await assetsFolder.GetFileAsync(recordingResult.Value);
+                        var translationResult = await _translator.Translate(file.Path);
+
+                        if (translationResult.Success)
                         {
-                            _logger.Error("Error stopping recording. Recordig name cannot be null.");
-                            throw new Exception("Error stopping recording.");
+                            if (this.CopyTextToClipboard(translationResult.Value))
+                            {
+                                _animator.AnimateMakeBusyInvisible(() => DoneTeachingTip.IsOpen = true);
+
+                                RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
+
+                                return;
+                            }
                         }
                         else
                         {
-                            try
-                            {
-                                _animator.AnimateMakeBusyVisible();
-                                var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
-                                var file = await assetsFolder.GetFileAsync(recordingName);
-                                var translation = await _translator.Translate(file.Path);
-                                CopyTextToClipboard(translation);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error("Error retrieving the file after recording and before translation.", ex);
-                                throw;
-                            }
-                            finally
-                            {
-                                _animator.AnimateMakeBusyInvisible(() => DoneTeachingTip.IsOpen = true);
-                            }
-
-                            RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
-                            retryResult = true;
+                            _animator.AnimateMakeBusyInvisible();
                         }
-                    });
-
-                    if (!retryResult)
-                    {
-                        RecordingInfoBar.Message = "Sorry, there was an error. Please try again.";
                     }
                 }
+                RecordingInfoBar.Message = "Sorry, there was an error. Please try again.";
             }
             catch (Exception ex)
             {
                 _logger.Error("Exception stopping recording.", ex);
+                _animator.AnimateMakeBusyInvisible();
             }
             finally
             {
@@ -213,11 +175,22 @@ namespace ScriptorABC
             }
         }
 
-        private static void CopyTextToClipboard(string textToCopy)
+        private bool CopyTextToClipboard(string textToCopy)
         {
-            DataPackage dataPackage = new();
-            dataPackage.SetText(textToCopy);
-            Clipboard.SetContent(dataPackage);
+            try
+            {
+                DataPackage dataPackage = new();
+                dataPackage.SetText(textToCopy);
+                Clipboard.SetContent(dataPackage);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("Exception copying text to clipboard.", ex);
+            }
+
+            return false;
         }
 
         private bool TryStyleWindow()
@@ -237,13 +210,13 @@ namespace ScriptorABC
 
                     return true;
                 }
-
-                return false;
             }
             catch (Exception ex)
             {
                 this._logger.Error("Exception trying to style the window", ex);
             }
+
+            return false;
         }
 
         private async void SubscriptionTeachingTip_ActionButtonClick(TeachingTip sender, object args)
@@ -255,16 +228,10 @@ namespace ScriptorABC
             {
                 _purchasingSubscription = true;
                 SubscriptionTeachingTip.IsEnabled = false;
-                var retryResult = false;
-                await _subscriptionRetryPolicy.ExecuteAsync(async () =>
-                {
-                    _logger.Info("Purchasing subscription.");
-                    await _clerk.PurchaseLicense();
+                    
+                var purchaseResult = await _clerk.PurchaseLicense();
 
-                    retryResult = true;
-                });
-
-                if (retryResult)
+                if (purchaseResult.Value)
                 {
                     SubscriptionTeachingTip.IsEnabled = true;
                     _isSubscriptionActive = true;

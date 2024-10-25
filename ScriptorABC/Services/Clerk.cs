@@ -1,4 +1,7 @@
 ﻿using log4net;
+using Polly;
+using Polly.Retry;
+using ScriptorABC.Models;
 using System;
 using System.Threading.Tasks;
 using Windows.Services.Store;
@@ -7,8 +10,8 @@ namespace ScriptorABC.Services
 {
     public interface IClerk
     {
-        Task<bool> PurchaseLicense();
-        Task<bool> IsSubscriptionActive();
+        Task<Result<bool>> PurchaseLicense();
+        Task<Result<bool>> IsSubscriptionActive();
     }
     public class Clerk : IClerk
     {
@@ -16,111 +19,140 @@ namespace ScriptorABC.Services
         private const string subscriptionStoreId = "scriptor_sub";
         private StoreAppLicense _storeAppLicense = null;
         private StoreProduct _storeProduct = null;
-        private ILog _logger;
+        private readonly ILog _logger;
+        private readonly AsyncRetryPolicy _clerkRetryPolicy;
 
         public Clerk(ILog logger)
         {
             _logger = logger;
+            _clerkRetryPolicy = Policy.Handle<Exception>().WaitAndRetryAsync(
+                3,
+                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (exception, retryCount, context) => _logger.Error($"Retry for clerk {retryCount} due to {exception.GetType().Name}: {exception.Message}")
+            );
         }
 
-        public async Task<bool> IsSubscriptionActive()
+        public async Task<Result<bool>> IsSubscriptionActive()
         {
-            if (_context == null)
-            {
-                _context = StoreContext.GetDefault();
-            }
+            _logger.Info("Validating subscription.");
 
-            if (_storeAppLicense == null)
+            var isActiveLicense = new Result<bool>();
+            await _clerkRetryPolicy.ExecuteAsync(async () =>
             {
-                _storeAppLicense = await _context.GetAppLicenseAsync();
-            }
-
-            // Check if the customer has the rights to the subscription.
-            foreach (var addOnLicense in _storeAppLicense.AddOnLicenses)
-            {
-                StoreLicense license = addOnLicense.Value;
-                if (license.SkuStoreId.StartsWith(subscriptionStoreId))
+                if (_context == null)
                 {
-                    if (license.IsActive)
+                    _context = StoreContext.GetDefault();
+                }
+
+                if (_storeAppLicense == null)
+                {
+                    _storeAppLicense = await _context.GetAppLicenseAsync();
+                }
+
+                // Check if the customer has the rights to the subscription.
+                foreach (var addOnLicense in _storeAppLicense.AddOnLicenses)
+                {
+                    StoreLicense license = addOnLicense.Value;
+                    if (license.SkuStoreId.StartsWith(subscriptionStoreId))
                     {
-                        // The expiration date is available in the license.ExpirationDate property.
-                        return true;
+                        isActiveLicense.Value = license.IsActive;
+                        isActiveLicense.Success = true;
+                        break;
                     }
                 }
-            }
+            });
 
-            // The customer does not have a license to the subscription.
-            return false;
+            return isActiveLicense;
         }
 
-        public async Task<bool> PurchaseLicense()
+        public async Task<Result<bool>> PurchaseLicense()
         {
-            // Request a purchase of the subscription product. If a trial is available it will be offered 
-            // to the customer. Otherwise, the non-trial SKU will be offered.
-            if (_storeProduct == null)
-            { 
-                await this.InitializeSubscriptionProductAsync();
-            }
+            _logger.Info("Purchasing license.");
 
-            var result = await _storeProduct.RequestPurchaseAsync();
-
-            // Capture the error message for the operation, if any.
-            var extendedError = string.Empty;
-            if (result.ExtendedError != null)
+            var purchaseResult = new Result<bool>();
+            await _clerkRetryPolicy.ExecuteAsync(async () =>
             {
-                extendedError = result.ExtendedError.Message;
-            }
+                if (_storeProduct == null)
+                {
+                    await this.InitializeSubscriptionProductAsync();
+                }
 
-            switch (result.Status)
-            {
-                case StorePurchaseStatus.Succeeded:
-                    // Show a UI to acknowledge that the customer has purchased your subscription 
-                    // and unlock the features of the subscription. 
-                    return true;
-                case StorePurchaseStatus.NotPurchased:
-                    _logger.Error("The purchase did not complete. The customer may have cancelled the purchase. ExtendedError: " + extendedError);
-                    break;
-                case StorePurchaseStatus.ServerError:
-                case StorePurchaseStatus.NetworkError:
-                    _logger.Error("The purchase was unsuccessful due to a server or network error. ExtendedError: " + extendedError);
-                    break;
-                case StorePurchaseStatus.AlreadyPurchased:
-                    _logger.Error("The customer already owns this subscription. ExtendedError: " + extendedError);
-                    break;
-            }
+                var result = await _storeProduct.RequestPurchaseAsync();
 
-            return false;
+                // Capture the error message for the operation, if any.
+                var extendedError = string.Empty;
+                if (result.ExtendedError != null)
+                {
+                    extendedError = result.ExtendedError.Message;
+                }
+
+                switch (result.Status)
+                {
+                    case StorePurchaseStatus.Succeeded:
+                        // Show a UI to acknowledge that the customer has purchased your subscription 
+                        // and unlock the features of the subscription. 
+                        purchaseResult.Value = true;
+                        purchaseResult.Success = true;
+                        break;
+                    case StorePurchaseStatus.NotPurchased:
+                        purchaseResult.Value = false;
+                        purchaseResult.Success = false;
+                        purchaseResult.Message = "The purchase did not complete. The customer may have cancelled the purchase. ExtendedError: " + extendedError;
+                        _logger.Error(purchaseResult.Message);
+                        break;
+                    case StorePurchaseStatus.ServerError:
+                    case StorePurchaseStatus.NetworkError:
+                        purchaseResult.Value = false;
+                        purchaseResult.Success = false;
+                        purchaseResult.Message = "The purchase was unsuccessful due to a server or network error. ExtendedError: " + extendedError;
+                        _logger.Error(purchaseResult.Message);
+                        break;
+                    case StorePurchaseStatus.AlreadyPurchased:
+                        purchaseResult.Value = true;
+                        purchaseResult.Success = false;
+                        purchaseResult.Message = "The customer already owns this subscription. ExtendedError: " + extendedError;
+                        _logger.Error(purchaseResult.Message);
+                        break;
+                }
+            });
+
+            return purchaseResult;
         }
 
         private async Task InitializeSubscriptionProductAsync()
         {
-            if (_storeProduct != null)
-                return;
+            _logger.Info("Initializing subscription info.");
 
-            if (_context == null)
+            await _clerkRetryPolicy.ExecuteAsync(async () =>
             {
-                _context = StoreContext.GetDefault();
-            }
+                if (_storeProduct != null)
+                    return;
 
-            var result = await _context.GetAssociatedStoreProductsAsync(["Durable"]);
-            if (result.ExtendedError != null)
-            {
-                _logger.Error("Something went wrong while getting the add-ons. ExtendedError:" + result.ExtendedError);
-                return;
-            }
-
-            // Look for the product that represents the subscription.
-            foreach (var item in result.Products)
-            {
-                var product = item.Value;
-                if (product.StoreId == subscriptionStoreId)
+                if (_context == null)
                 {
-                    _storeProduct = product;
+                    _context = StoreContext.GetDefault();
+                }
+
+                var result = await _context.GetAssociatedStoreProductsAsync(["Durable"]);
+                if (result.ExtendedError != null)
+                {
+                    _logger.Error("Something went wrong while getting the add-ons. ExtendedError:" + result.ExtendedError);
                     return;
                 }
-            }
 
-            _logger.Warn("The subscription was not found.");
+                // Look for the product that represents the subscription.
+                foreach (var item in result.Products)
+                {
+                    var product = item.Value;
+                    if (product.StoreId == subscriptionStoreId)
+                    {
+                        _storeProduct = product;
+                        return;
+                    }
+                }
+
+                _logger.Warn("The subscription was not found.");
+            });
         }
     }
 }

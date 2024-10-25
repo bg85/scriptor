@@ -1,4 +1,5 @@
 ﻿using log4net;
+using ScriptorABC.Models;
 using System;
 using System.Threading.Tasks;
 using Windows.Media.Capture;
@@ -10,8 +11,8 @@ namespace ScriptorABC.Services
     public interface IVoiceRecorder
     {
         bool IsReady { get; }
-        Task<bool> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium);
-        Task<string> StopRecording();
+        Task<Result<bool>> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium);
+        Task<Result<string>> StopRecording();
     }
 
     public class VoiceRecorder : IVoiceRecorder, IDisposable
@@ -19,7 +20,7 @@ namespace ScriptorABC.Services
         private MediaCapture _mediaCapture;
         private StorageFolder _storageFolder;
         private string _fileName;
-        private ILog _logger;
+        private readonly ILog _logger;
 
         public VoiceRecorder(ILog logger)
         {
@@ -28,6 +29,8 @@ namespace ScriptorABC.Services
 
         private async Task InitializeMediaCaptureAsync()
         {
+            _logger.Info("Initializing media capture.");
+
             _mediaCapture = new MediaCapture();
             var settings = new MediaCaptureInitializationSettings
             {
@@ -46,8 +49,11 @@ namespace ScriptorABC.Services
 
         public bool IsReady { get => _mediaCapture != null && _storageFolder != null; }
 
-        public async Task<bool> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium)
+        public async Task<Result<bool>> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium)
         {
+            _logger.Info("Starting recording.");
+
+            var result = new Result<bool>();
             try
             {
                 _storageFolder = await ApplicationData.Current.LocalFolder.CreateFolderAsync("Recordings", CreationCollisionOption.OpenIfExists);
@@ -56,27 +62,40 @@ namespace ScriptorABC.Services
 
                 await InitializeMediaCaptureAsync();
                 await _mediaCapture.StartRecordToStorageFileAsync(MediaEncodingProfile.CreateMp3(encodingQuality), file);
-                return true;
+                
+                result.Success = true;
+                result.Value = true;
             }
             catch (Exception ex)
             {
+                result.Success = false;
+                result.Value = false;
+                result.Message = $"Failed to start recording. Exception: {ex.Message}";
                 _logger.Error("Failed to start recording.", ex);
-                return false;
             }
+
+            return result;
         }
 
-        public async Task<string> StopRecording()
+        public async Task<Result<string>> StopRecording()
         {
+            _logger.Info("Stopping recording.");
+
+            var result = new Result<string>();
             try
             {
                 await _mediaCapture.StopRecordAsync();
-                return _fileName;
+                result.Success = true;
+                result.Value = _fileName;
             }
             catch (Exception ex)
             {
+                result.Success = false;
+                result.Message = $"Failed to stop recording. Exception: {ex.Message}";
                 _logger.Error("Failed to stop recording.", ex);
-                return null;
             }
+
+            return result;
         }
 
         public void Dispose()

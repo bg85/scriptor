@@ -11,9 +11,9 @@ namespace ScriptorABC.Services
     }
     public class Janitor : IJanitor
     {
-        private ILog _logger;
+        private readonly ILog _logger;
         public Janitor(ILog logger) { 
-            this._logger = logger;
+            _logger = logger;
         }
 
         public async Task CleanOlderFiles()

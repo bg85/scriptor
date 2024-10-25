@@ -8,23 +8,31 @@ namespace ScriptorABC.Services
 {
     public class DependencyInjectionModule
     {
-        public void RegisterServices(IServiceCollection services)
+        public static void RegisterServices(IServiceCollection services)
         {
-            services.AddSingleton<IResourceManager, ResourceManager>();
-            services.AddSingleton<IVoiceRecorder, VoiceRecorder>();
-            services.AddSingleton<ITranslator, Translator>();
-            services.AddSingleton<IAnimator, Animator>();
-            services.AddSingleton<IJanitor, Janitor>();
-            services.AddSingleton<IClerk, Clerk>();
+            try
+            {
+                services.AddSingleton<IResourceManager, ResourceManager>();
+                services.AddSingleton<IVoiceRecorder, VoiceRecorder>();
+                services.AddSingleton<ITranslator, Translator>();
+                services.AddSingleton<IAnimator, Animator>();
+                services.AddSingleton<IJanitor, Janitor>();
+                services.AddSingleton<IClerk, Clerk>();
 
-            string credentialsPath = Path.Combine(AppContext.BaseDirectory, "Assets", "scriptor-client.json");
-            string configPath = Path.Combine(AppContext.BaseDirectory, "log4net.xml");
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath);
-            XmlConfigurator.ConfigureAndWatch(LogManager.GetRepository(GetType().Assembly), new FileInfo(configPath));
+                string credentialsPath = Path.Combine(AppContext.BaseDirectory, "Assets", "scriptor-client.json");
+                string configPath = Path.Combine(AppContext.BaseDirectory, "log4net.xml");
+                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath);
+                XmlConfigurator.ConfigureAndWatch(LogManager.GetRepository(GetType().Assembly), new FileInfo(configPath));
 
-            ILog logger = LogManager.GetLogger(typeof(Program));
-            services.AddSingleton<ILog>(logger);
-            logger.Info("Starting Scriptor");
+                ILog logger = LogManager.GetLogger(typeof(Program));
+                services.AddSingleton(logger);
+                logger.Info("Starting Scriptor");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+           
         }
 
         // Used this function to troubleshoot issue writting to Google Cloud Logs

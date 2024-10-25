@@ -16,7 +16,7 @@ namespace ScriptorABC.Services
         void AnimateMakeBitmapVisible();
         void AnimateMakeBitmapInvisible();
         void AnimateMakeBusyVisible();
-        void AnimateMakeBusyInvisible(Action doneAction);
+        void AnimateMakeBusyInvisible(Action doneAction = null);
 
         void SetupAnimations(Compositor compositor,
             Button microphoneButton,
@@ -182,7 +182,7 @@ namespace ScriptorABC.Services
             }
         }
 
-        public void AnimateMakeBusyInvisible(Action doneAction)
+        public void AnimateMakeBusyInvisible(Action doneAction = null)
         {
             try
             {
@@ -199,7 +199,11 @@ namespace ScriptorABC.Services
                 busyToInvisibleAnimation.Duration = TimeSpan.FromSeconds(1);
 
                 _progressRingVisual.StartAnimation("Opacity", busyToInvisibleAnimation);
-                doneAction();
+
+                if (doneAction != null)
+                {
+                    doneAction();
+                }
             }
             catch (Exception ex)
             {
