@@ -1,9 +1,9 @@
 ﻿using log4net;
-using ScriptorABC.Models;
+using ScriptorWPF.Models;
 using System.IO;
 using System.Reflection;
 
-namespace ScriptorABC.Services
+namespace ScriptorWPF.Services
 {
     public interface IResourceManager
     {

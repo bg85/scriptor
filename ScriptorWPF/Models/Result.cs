@@ -1,4 +1,4 @@
-﻿namespace ScriptorABC.Models
+﻿namespace ScriptorWPF.Models
 {
     public class Result<T>
     {

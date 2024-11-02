@@ -3,7 +3,7 @@ using log4net;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 
-namespace ScriptorABC.Services
+namespace ScriptorWPF.Services
 {
     public class DependencyInjectionModule
     {

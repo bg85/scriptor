@@ -1,9 +1,9 @@
 ﻿using log4net;
 using Polly;
 using Polly.Retry;
-using ScriptorABC.Models;
+using ScriptorWPF.Models;
 
-namespace ScriptorABC.Services
+namespace ScriptorWPF.Services
 {
     public interface IClerk
     {
@@ -137,18 +137,18 @@ namespace ScriptorABC.Services
             //        return;
             //    }
 
-                // Look for the product that represents the subscription.
-                //foreach (var item in result.Products)
-                //{
-                //    var product = item.Value;
-                //    if (product.StoreId == subscriptionStoreId)
-                //    {
-                //        _storeProduct = product;
-                //        return;
-                //    }
-                //}
+            // Look for the product that represents the subscription.
+            //foreach (var item in result.Products)
+            //{
+            //    var product = item.Value;
+            //    if (product.StoreId == subscriptionStoreId)
+            //    {
+            //        _storeProduct = product;
+            //        return;
+            //    }
+            //}
 
-                _logger.Warn("The subscription was not found.");
+            _logger.Warn("The subscription was not found.");
             //});
         }
     }

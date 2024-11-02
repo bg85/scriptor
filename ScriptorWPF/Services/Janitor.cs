@@ -2,7 +2,7 @@
 using log4net;
 
 
-namespace ScriptorABC.Services
+namespace ScriptorWPF.Services
 {
     public interface IJanitor
     {

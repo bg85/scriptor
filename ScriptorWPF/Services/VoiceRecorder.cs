@@ -1,9 +1,9 @@
 ﻿using System.IO;
 using log4net;
 using NAudio.Wave;
-using ScriptorABC.Models;
+using ScriptorWPF.Models;
 
-namespace ScriptorABC.Services
+namespace ScriptorWPF.Services
 {
     public interface IVoiceRecorder
     {

@@ -1,9 +1,7 @@
 ﻿using System.Windows;
-using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
 using log4net;
 using Microsoft.Extensions.DependencyInjection;
-using ScriptorABC.Services;
+using ScriptorWPF.Services;
 
 namespace ScriptorWPF
 {
@@ -37,7 +35,7 @@ namespace ScriptorWPF
             _clerk = App.ServiceProvider.GetRequiredService<IClerk>();
 
             _animator = App.ServiceProvider.GetRequiredService<IAnimator>(); // Assuming you have your own implementation for setting up animations
-            _animator.SetupAnimations(MicrophoneButton, ButtonIcon, RecordingGifImage, BusyRing, RecordingInfoBar);
+            _animator.SetupAnimations(MicrophoneButton, ButtonIcon, RecordingGif, BusyRing, RecordingInfoBar);
 
             _janitor = App.ServiceProvider.GetRequiredService<IJanitor>();
             _janitorThread = new Thread(() =>
@@ -57,29 +55,7 @@ namespace ScriptorWPF
             _isSubscriptionActive = true;
 
             this.Closed += MainWindow_Closed;
-            this.LoadGif();
         }
-
-        private void LoadGif()
-        {
-            var gifUri = new Uri("pack://application:,,,/Assets/recording.gif");
-            var gifBitmapDecoder = new GifBitmapDecoder(gifUri, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default);
-            RecordingGifImage.Source = gifBitmapDecoder.Frames[0];
-
-            var animation = new ObjectAnimationUsingKeyFrames
-            {
-                Duration = new Duration(TimeSpan.FromMilliseconds(100 * gifBitmapDecoder.Frames.Count)),
-                RepeatBehavior = RepeatBehavior.Forever
-            };
-
-            for (int i = 0; i < gifBitmapDecoder.Frames.Count; i++)
-            {
-                animation.KeyFrames.Add(new DiscreteObjectKeyFrame(gifBitmapDecoder.Frames[i], KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(100 * i))));
-            }
-
-            RecordingGifImage.BeginAnimation(System.Windows.Controls.Image.SourceProperty, animation);
-        }
-
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
             _janitorThread?.Join();
@@ -140,6 +116,7 @@ namespace ScriptorWPF
             try
             {
                 this._isRecording = !this._isRecording;
+                MicrophoneButton.IsEnabled = false;
                 _animator.AnimateMakeBitmapInvisible();
                 if (!withError)
                 {
@@ -150,7 +127,7 @@ namespace ScriptorWPF
                     }
                     else
                     {
-                        //_animator.AnimateMakeBusyVisible();
+                        _animator.AnimateMakeBusyVisible();
                         var assetsFolder = System.IO.Path.Combine(_recordingsLocation, "Recordings");
                         var file = System.IO.Path.Combine(assetsFolder, recordingResult.Value);
                         var translationResult = await _translator.Translate(file);

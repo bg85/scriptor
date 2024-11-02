@@ -2,11 +2,11 @@
 using log4net;
 using OpenAI.Audio;
 using Polly;
-using ScriptorABC.Models;
 using Polly.Retry;
+using ScriptorWPF.Models;
 
 
-namespace ScriptorABC.Services
+namespace ScriptorWPF.Services
 {
     public interface ITranslator
     {
@@ -39,7 +39,7 @@ namespace ScriptorABC.Services
             var result = new Result<string>();
             await _retryPolicy.ExecuteAsync(async () =>
             {
-                var resourceContent = _resourceManager.GetResourceContent("ScriptorABC.Assets.scriptor-api.txt");
+                var resourceContent = _resourceManager.GetResourceContent("ScriptorWPF.Assets.scriptor-api.txt");
 
                 if (resourceContent.Success)
                 {

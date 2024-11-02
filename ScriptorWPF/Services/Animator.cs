@@ -5,7 +5,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using log4net;
 
-namespace ScriptorABC.Services
+namespace ScriptorWPF.Services
 {
     public interface IAnimator
     {
@@ -15,7 +15,7 @@ namespace ScriptorABC.Services
         void AnimateMakeBitmapInvisible();
         void AnimateMakeBusyVisible();
         void AnimateMakeBusyInvisible(Action doneAction = null);
-        void SetupAnimations(Button microphoneButton, TextBlock micButtonIcon, Image recordingGifImage, ProgressBar progressBar, TextBlock recordingInfoBar);
+        void SetupAnimations(Button microphoneButton, TextBlock micButtonIcon, Image recordingGif, Image busyRing, TextBlock recordingInfoBar);
     }
 
     public class Animator : IAnimator
@@ -24,8 +24,8 @@ namespace ScriptorABC.Services
         private DispatcherTimer _recordingAnimationTimer;
         private Button _microphoneButton;
         private TextBlock _micButtonIcon;
-        private Image _recordingGifImage;
-        private ProgressBar _progressBar;
+        private Image _recordingGif;
+        private Image _busyRing;
         private TextBlock _recordingInfoBar;
 
         public Animator(ILog logger)
@@ -33,11 +33,11 @@ namespace ScriptorABC.Services
             _logger = logger;
         }
 
-        public void SetupAnimations(Button microphoneButton, TextBlock micButtonIcon, Image recordingGifImage, ProgressBar progressBar, TextBlock recordingInfoBar)
+        public void SetupAnimations(Button microphoneButton, TextBlock micButtonIcon, Image recordingGifImage, Image busyRing, TextBlock recordingInfoBar)
         {
             _microphoneButton = microphoneButton;
-            _recordingGifImage = recordingGifImage;
-            _progressBar = progressBar;
+            _recordingGif = recordingGifImage;
+            _busyRing = busyRing;
             _micButtonIcon = micButtonIcon;
             _recordingInfoBar = recordingInfoBar;
             _recordingAnimationTimer = new DispatcherTimer();
@@ -53,10 +53,10 @@ namespace ScriptorABC.Services
                 {
                     From = margin,
                     To = new Thickness(195, margin.Top, margin.Right, margin.Bottom),
-                    Duration = TimeSpan.FromSeconds(1)
+                    Duration = TimeSpan.FromSeconds(0.5)
                 };
                 _microphoneButton.BeginAnimation(FrameworkElement.MarginProperty, animation);
-                _recordingAnimationTimer.Interval = TimeSpan.FromSeconds(1);
+                _recordingAnimationTimer.Interval = TimeSpan.FromSeconds(0.5);
                 _recordingAnimationTimer.Start();
             }
             catch (Exception ex)
@@ -74,7 +74,7 @@ namespace ScriptorABC.Services
                 {
                     From = margin,
                     To = new Thickness(0, margin.Top, margin.Right, margin.Bottom),
-                    Duration = TimeSpan.FromSeconds(1)
+                    Duration = TimeSpan.FromSeconds(0.5)
                 };
                 _microphoneButton.BeginAnimation(FrameworkElement.MarginProperty, animation);
             }
@@ -92,9 +92,9 @@ namespace ScriptorABC.Services
                 {
                     From = 0,
                     To = 1,
-                    Duration = TimeSpan.FromSeconds(1)
+                    Duration = TimeSpan.FromSeconds(0.5)
                 };
-                _recordingGifImage.BeginAnimation(UIElement.OpacityProperty, animation);
+                _recordingGif.BeginAnimation(UIElement.OpacityProperty, animation);
             }
             catch (Exception ex)
             {
@@ -110,9 +110,9 @@ namespace ScriptorABC.Services
                 {
                     From = 1,
                     To = 0,
-                    Duration = TimeSpan.FromSeconds(1)
+                    Duration = TimeSpan.FromSeconds(0.5)
                 };
-                _recordingGifImage.BeginAnimation(UIElement.OpacityProperty, animation);
+                _recordingGif.BeginAnimation(UIElement.OpacityProperty, animation);
             }
             catch (Exception ex)
             {
@@ -131,7 +131,7 @@ namespace ScriptorABC.Services
                     To = 1,
                     Duration = TimeSpan.FromSeconds(0.5)
                 };
-                _progressBar.BeginAnimation(UIElement.OpacityProperty, animation);
+                _busyRing.BeginAnimation(UIElement.OpacityProperty, animation);
             }
             catch (Exception ex)
             {
@@ -148,15 +148,15 @@ namespace ScriptorABC.Services
                 ToolTipService.SetToolTip(_microphoneButton, "Press to start recording!");
                 _recordingInfoBar.Text = "Press the button and start talking. We'll do the rest.";
 
-                this.AnimateButtonToTheLeft();
+                AnimateButtonToTheLeft();
 
                 var animation = new DoubleAnimation
                 {
                     From = 1,
                     To = 0,
-                    Duration = TimeSpan.FromSeconds(1)
+                    Duration = TimeSpan.FromSeconds(0.5)
                 };
-                _progressBar.BeginAnimation(UIElement.OpacityProperty, animation);
+                _busyRing.BeginAnimation(UIElement.OpacityProperty, animation);
 
                 if (doneAction != null)
                 {

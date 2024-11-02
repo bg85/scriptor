@@ -1,6 +1,6 @@
 ﻿using log4net;
 using Microsoft.Extensions.DependencyInjection;
-using ScriptorABC.Services;
+using ScriptorWPF.Services;
 using System.Windows;
 
 namespace ScriptorWPF
