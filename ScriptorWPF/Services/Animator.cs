@@ -158,10 +158,7 @@ namespace ScriptorWPF.Services
                 };
                 _busyRing.BeginAnimation(UIElement.OpacityProperty, animation);
 
-                if (doneAction != null)
-                {
-                    animation.Completed += (s, e) => doneAction();
-                }
+                doneAction?.Invoke();
             }
             catch (Exception ex)
             {

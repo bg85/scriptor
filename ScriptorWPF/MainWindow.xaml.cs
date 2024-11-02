@@ -67,6 +67,7 @@ namespace ScriptorWPF
 
         private void DoneTeachingTip_CloseButtonClick(object sender, RoutedEventArgs e)
         {
+            RecordingInfoBar.Visibility = Visibility.Visible;
             DoneTeachingTip.Visibility = Visibility.Collapsed;
         }
 
@@ -136,7 +137,11 @@ namespace ScriptorWPF
                         {
                             if (this.CopyTextToClipboard(translationResult.Value))
                             {
-                                _animator.AnimateMakeBusyInvisible(() => DoneTeachingTip.Visibility = Visibility.Visible);
+                                _animator.AnimateMakeBusyInvisible(() => 
+                                {
+                                    DoneTeachingTip.Visibility = Visibility.Visible;
+                                    RecordingInfoBar.Visibility = Visibility.Collapsed;
+                                });
                                 RecordingInfoBar.Text = "Press the button and start talking. We'll do the rest.";
                                 return;
                             }
