@@ -7,20 +7,17 @@ namespace ScriptorABC.Services
 {
     public interface IJanitor 
     {
-        Task CleanOlderFiles();
+        Task CleanOlderFiles(string location);
     }
-    public class Janitor : IJanitor
+    public class Janitor(ILog logger) : IJanitor
     {
-        private readonly ILog _logger;
-        public Janitor(ILog logger) { 
-            _logger = logger;
-        }
+        private readonly ILog _logger = logger;
 
-        public async Task CleanOlderFiles()
+        public async Task CleanOlderFiles(string location)
         {
             try
             {
-                var storageFolder = await ApplicationData.Current.LocalFolder.CreateFolderAsync("Recordings", CreationCollisionOption.OpenIfExists);
+                var storageFolder = await StorageFolder.GetFolderFromPathAsync(location);
                 var files = await storageFolder.GetFilesAsync();
 
                 foreach (var file in files)

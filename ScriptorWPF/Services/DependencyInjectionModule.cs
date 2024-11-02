@@ -2,7 +2,6 @@
 using log4net;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
-using System;
 
 namespace ScriptorABC.Services
 {
@@ -24,7 +23,7 @@ namespace ScriptorABC.Services
                 Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath);
                 XmlConfigurator.ConfigureAndWatch(LogManager.GetRepository(typeof(DependencyInjectionModule).Assembly), new FileInfo(configPath));
 
-                ILog logger = LogManager.GetLogger(typeof(Program));
+                ILog logger = LogManager.GetLogger(typeof(DependencyInjectionModule));
                 services.AddSingleton(logger);
                 logger.Info("Starting Scriptor");
             }
@@ -32,7 +31,7 @@ namespace ScriptorABC.Services
             {
                 Console.WriteLine(ex.ToString());
             }
-           
+
         }
 
         // Used this function to troubleshoot issue writting to Google Cloud Logs

@@ -399,3 +399,5 @@ FodyWeavers.xsd
 *.sln.iml
 /ScriptorABC/Assets/scriptor-api.txt
 /ScriptorABC/Assets/scriptor-client.json
+/ScriptorWPF/Assets/scriptor-api.txt
+/ScriptorWPF/Assets/scriptor-client.json

@@ -1,0 +1,48 @@
+﻿<Window x:Class="ScriptorWPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ScriptorWPF"
+        mc:Ignorable="d"
+        Title="Scriptor" Height="179" Width="356">
+    <Grid x:Name="MainGrid" VerticalAlignment="Center" HorizontalAlignment="Center" Width="336" Height="151">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="120"/>
+            <RowDefinition Height="20"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Image x:Name="RecordingGifImage" Grid.Row="0" Grid.Column="0" Margin="5,28,77,28" Visibility="Visible" Opacity="0"/>
+        <ProgressBar x:Name="BusyRing" IsIndeterminate="True" Background="LightGray" Height="100" Width="100" Opacity="0" Margin="-2,10,207,10"/>
+        <Button x:Name="MicrophoneButton" Width="100" Height="100" Click="MicrophoneButton_Click" ToolTip="Press to start recording!" Grid.Row="0" Grid.Column="0" Margin="0,10,10,10">
+            <TextBlock x:Name="ButtonIcon" FontFamily="Segoe MDL2 Assets" Text="&#xE720;" FontSize="36" Foreground="DarkBlue">
+                <TextBlock.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform/>
+                        <SkewTransform/>
+                        <RotateTransform/>
+                        <TranslateTransform/>
+                    </TransformGroup>
+                </TextBlock.RenderTransform>
+            </TextBlock>
+        </Button>
+        <Border x:Name="DoneTeachingTip" Background="White" BorderBrush="Black" BorderThickness="1" Padding="10" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="Your translation was copied to clipboard" FontWeight="Bold"/>
+                <TextBlock Text="Press CTRL+V or RightClick + Paste to paste it."/>
+                <Button Content="Got it!" Click="DoneTeachingTip_CloseButtonClick"/>
+            </StackPanel>
+        </Border>
+        <TextBlock x:Name="RecordingInfoBar" Text="Press the button and start talking. We'll do the rest." HorizontalAlignment="Center" VerticalAlignment="Top" Foreground="RoyalBlue" Grid.Row="1" FontSize="14"/>
+        <Border x:Name="SubscriptionTeachingTip" Background="White" BorderBrush="Black" BorderThickness="1" Padding="10" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="Sorry, your subscription has expired." FontWeight="Bold"/>
+                <TextBlock Text="Please consider extending it one more month."/>
+                <Button Content="Purchase License" Click="SubscriptionTeachingTip_ActionButtonClick"/>
+                <Button Content="Exit Application" Click="SubscriptionTeachingTip_CloseButtonClick"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

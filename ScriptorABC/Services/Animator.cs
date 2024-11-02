@@ -27,7 +27,7 @@ namespace ScriptorABC.Services
             XamlRoot xamlRoot);
     }
 
-    public class Animator : IAnimator
+    public class Animator(ILog logger) : IAnimator
     {
         private XamlRoot _xamlRoot;
         private Compositor _compositor;
@@ -40,12 +40,7 @@ namespace ScriptorABC.Services
         private Visual _progressRingVisual;
         private Image _recordingGifImage;
         private Visual _recordingBitmapVisual;
-        private readonly ILog _logger;
-
-        public Animator(ILog logger)
-        {
-            _logger = logger;
-        }
+        private readonly ILog _logger = logger;
 
         public void AnimateButtonToTheRight()
         {

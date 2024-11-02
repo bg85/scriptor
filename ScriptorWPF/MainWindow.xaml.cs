@@ -1,28 +1,18 @@
+﻿using System.Windows;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using log4net;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
 using ScriptorABC.Services;
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Windows.ApplicationModel.DataTransfer;
-using Windows.Storage;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
-
-namespace ScriptorABC
+namespace ScriptorWPF
 {
     /// <summary>
-    /// An empty window that can be used on its own or navigated to within a Frame.
+    /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public sealed partial class MainWindow : Window
+    public partial class MainWindow : Window
     {
-        private string _recordingsLocation = Windows.Storage.ApplicationData.Current.LocalCacheFolder.Path;
+        private string _recordingsLocation = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         private const string _recordingsFolderName = "Recordings";
         private bool _isRecording;
         private readonly IVoiceRecorder _voiceRecorder;
@@ -39,50 +29,69 @@ namespace ScriptorABC
 
         public MainWindow()
         {
-            this.TryStyleWindow();
-            this.InitializeComponent();
-
-            RecordingGifImage.Opacity = 0;
-            BitmapImage recordingBitmapImage = new(new Uri("ms-appx:///Assets/recording.gif"));
-            RecordingGifImage.Source = recordingBitmapImage;
+            InitializeComponent();
 
             _voiceRecorder = App.ServiceProvider.GetRequiredService<IVoiceRecorder>();
             _translator = App.ServiceProvider.GetRequiredService<ITranslator>();
             _logger = App.ServiceProvider.GetRequiredService<ILog>();
             _clerk = App.ServiceProvider.GetRequiredService<IClerk>();
 
-            _animator = App.ServiceProvider.GetRequiredService<IAnimator>();
-            _animator.SetupAnimations(this.Compositor, MicrophoneButton, ButtonIcon, RecordingInfoBar, BusyRing, RecordingGifImage, this.Content.XamlRoot);
+            _animator = App.ServiceProvider.GetRequiredService<IAnimator>(); // Assuming you have your own implementation for setting up animations
+            _animator.SetupAnimations(MicrophoneButton, ButtonIcon, RecordingGifImage, BusyRing, RecordingInfoBar);
 
             _janitor = App.ServiceProvider.GetRequiredService<IJanitor>();
-            _janitorThread = new Thread(async () =>
+            _janitorThread = new Thread(() =>
             {
-                await _janitor.CleanOlderFiles(Path.Combine(_recordingsLocation, _recordingsFolderName));
+                _janitor.CleanOlderFiles(System.IO.Path.Combine(_recordingsLocation, _recordingsFolderName));
             });
             _janitorThread.Start();
 
-            _subscriptionThread = new Thread(async () => {
-                _isRequestingSubscriptionInfo = true;
-                    
-                var result = await _clerk.IsSubscriptionActive();
-                _isSubscriptionActive = result.Success && result.Value;
-                
-                _isRequestingSubscriptionInfo = false;
-            });
-            _subscriptionThread.Start();
+            //_subscriptionThread = new Thread(async () =>
+            //{
+            //    _isRequestingSubscriptionInfo = true;
+            //    var result = await _clerk.IsSubscriptionActive();
+            //    _isSubscriptionActive = result.Success && result.Value;
+            //    _isRequestingSubscriptionInfo = false;
+            //});
+            //_subscriptionThread.Start();
+            _isSubscriptionActive = true;
 
             this.Closed += MainWindow_Closed;
+            this.LoadGif();
         }
 
-        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        private void LoadGif()
+        {
+            var gifUri = new Uri("pack://application:,,,/Assets/recording.gif");
+            var gifBitmapDecoder = new GifBitmapDecoder(gifUri, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default);
+            RecordingGifImage.Source = gifBitmapDecoder.Frames[0];
+
+            var animation = new ObjectAnimationUsingKeyFrames
+            {
+                Duration = new Duration(TimeSpan.FromMilliseconds(100 * gifBitmapDecoder.Frames.Count)),
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+
+            for (int i = 0; i < gifBitmapDecoder.Frames.Count; i++)
+            {
+                animation.KeyFrames.Add(new DiscreteObjectKeyFrame(gifBitmapDecoder.Frames[i], KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(100 * i))));
+            }
+
+            RecordingGifImage.BeginAnimation(System.Windows.Controls.Image.SourceProperty, animation);
+        }
+
+        private void MainWindow_Closed(object? sender, EventArgs e)
         {
             _janitorThread?.Join();
-            _subscriptionThread.Join();
+            //_subscriptionThread.Join();
+
+            _logger.Info("App window was closed.");
+            LogManager.Shutdown();  // Flush logs and shut down log4net
         }
 
-        private void DoneTeachingTip_CloseButtonClick(TeachingTip sender, object args)
+        private void DoneTeachingTip_CloseButtonClick(object sender, RoutedEventArgs e)
         {
-            DoneTeachingTip.IsOpen = false;
+            DoneTeachingTip.Visibility = Visibility.Collapsed;
         }
 
         private async void MicrophoneButton_Click(object sender, RoutedEventArgs e)
@@ -97,7 +106,7 @@ namespace ScriptorABC
                 {
                     await this.StopRecording(true);
                     MicrophoneButton.IsEnabled = false;
-                    SubscriptionTeachingTip.IsOpen = true;
+                    SubscriptionTeachingTip.Visibility = Visibility.Visible;
                 }
                 else
                 {
@@ -105,7 +114,6 @@ namespace ScriptorABC
                 }
             }
         }
-
         private async Task StartRecording()
         {
             try
@@ -113,11 +121,10 @@ namespace ScriptorABC
                 this._isRecording = !this._isRecording;
                 MicrophoneButton.IsEnabled = false;
                 _animator.AnimateButtonToTheRight();
-
                 var recordingResult = await _voiceRecorder.StartRecording(_recordingsLocation, _recordingsFolderName);
                 if (!recordingResult.Success || !recordingResult.Value)
                 {
-                    RecordingInfoBar.Message = "Recording failed to start. Please try again.";
+                    RecordingInfoBar.Text = "Recording failed to start. Please try again.";
                     await this.StopRecording(true);
                 }
             }
@@ -134,7 +141,6 @@ namespace ScriptorABC
             {
                 this._isRecording = !this._isRecording;
                 _animator.AnimateMakeBitmapInvisible();
-
                 if (!withError)
                 {
                     var recordingResult = await _voiceRecorder.StopRecording();
@@ -144,34 +150,34 @@ namespace ScriptorABC
                     }
                     else
                     {
-                        _animator.AnimateMakeBusyVisible();
-                        var assetsFolder = await ApplicationData.Current.LocalFolder.GetFolderAsync("Recordings");
-                        var file = await assetsFolder.GetFileAsync(recordingResult.Value);
-                        var translationResult = await _translator.Translate(file.Path);
-
+                        //_animator.AnimateMakeBusyVisible();
+                        var assetsFolder = System.IO.Path.Combine(_recordingsLocation, "Recordings");
+                        var file = System.IO.Path.Combine(assetsFolder, recordingResult.Value);
+                        var translationResult = await _translator.Translate(file);
+                       
                         if (translationResult.Success)
                         {
                             if (this.CopyTextToClipboard(translationResult.Value))
                             {
-                                _animator.AnimateMakeBusyInvisible(() => DoneTeachingTip.IsOpen = true);
-
-                                RecordingInfoBar.Message = "Press the button and start talking. We'll do the rest.";
-
+                                _animator.AnimateMakeBusyInvisible(() => DoneTeachingTip.Visibility = Visibility.Visible);
+                                RecordingInfoBar.Text = "Press the button and start talking. We'll do the rest.";
                                 return;
                             }
                         }
                         else
                         {
+                            _logger.Warn("There was an error translating.");
                             _animator.AnimateMakeBusyInvisible();
                         }
                     }
                 }
-                RecordingInfoBar.Message = "Sorry, there was an error. Please try again.";
+                RecordingInfoBar.Text = "Sorry, there was an error. Please try again.";
             }
             catch (Exception ex)
             {
                 _logger.Error("Exception stopping recording.", ex);
                 _animator.AnimateMakeBusyInvisible();
+                RecordingInfoBar.Text = "Sorry, there was an error. Please try again.";
             }
             finally
             {
@@ -183,67 +189,34 @@ namespace ScriptorABC
         {
             try
             {
-                DataPackage dataPackage = new();
-                dataPackage.SetText(textToCopy);
-                Clipboard.SetContent(dataPackage);
-
+                Clipboard.SetText(textToCopy);
                 return true;
             }
             catch (Exception ex)
             {
                 _logger.Error("Exception copying text to clipboard.", ex);
             }
-
             return false;
         }
 
-        private bool TryStyleWindow()
-        {
-            try
-            {
-                this.AppWindow.Resize(new Windows.Graphics.SizeInt32(820, 450));
-                this.ExtendsContentIntoTitleBar = true;
-
-                if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
-                {
-                    MicaBackdrop micaBackdrop = new()
-                    {
-                        Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.Base
-                    };
-                    this.SystemBackdrop = micaBackdrop;
-
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                this._logger.Error("Exception trying to style the window", ex);
-            }
-
-            return false;
-        }
-
-        private async void SubscriptionTeachingTip_ActionButtonClick(TeachingTip sender, object args)
+        private async void SubscriptionTeachingTip_ActionButtonClick(object sender, RoutedEventArgs e)
         {
             if (_purchasingSubscription)
                 return;
-
             try
             {
                 _purchasingSubscription = true;
                 SubscriptionTeachingTip.IsEnabled = false;
-                    
                 var purchaseResult = await _clerk.PurchaseLicense();
-
                 if (purchaseResult.Value)
                 {
                     SubscriptionTeachingTip.IsEnabled = true;
                     _isSubscriptionActive = true;
-                    SubscriptionTeachingTip.Title = "Subscription Active";
-                    SubscriptionTeachingTip.Subtitle = "Your subscription has been activated. THANK YOU!";
-                    SubscriptionTeachingTip.ActionButtonContent = null;
+                    //SubscriptionTeachingTip.Title = "Subscription Active";
+                    //SubscriptionTeachingTip.Subtitle = "Your subscription has been activated. THANK YOU!";
+                    //SubscriptionTeachingTip.ActionButtonContent = null;
                     MicrophoneButton.IsEnabled = true;
-                    this._logger.Info("Subscription purchased.");
+                    _logger.Info("Subscription purchased.");
                 }
                 else
                 {
@@ -265,16 +238,16 @@ namespace ScriptorABC
             _logger.Error($"Error purchasing subscription. {(ex != null ? ex.Message : string.Empty)}");
             SubscriptionTeachingTip.IsEnabled = true;
             _isSubscriptionActive = false;
-            SubscriptionTeachingTip.Title = "Error purchasing subscription";
-            SubscriptionTeachingTip.Subtitle = "We are unable to purchase a subscription. Please try again later or contact us at scriptorabc@gmail.com";
-            SubscriptionTeachingTip.ActionButtonContent = null;
+            //SubscriptionTeachingTip.Title = "Error purchasing subscription";
+            //SubscriptionTeachingTip.Subtitle = "We are unable to purchase a subscription. Please try again later or contact us at scriptorabc@gmail.com";
+            //SubscriptionTeachingTip.ActionButtonContent = null;
         }
 
-        private void SubscriptionTeachingTip_CloseButtonClick(TeachingTip sender, object args)
+        private void SubscriptionTeachingTip_CloseButtonClick(object sender, RoutedEventArgs e)
         {
             if (_isSubscriptionActive)
             {
-                SubscriptionTeachingTip.IsOpen = false;
+                //SubscriptionTeachingTip.IsOpen = false;
             }
             else
             {

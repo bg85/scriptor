@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using ScriptorABC.Services;
 using System;
+using System.Threading;
+using Windows.ApplicationModel.Store;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -14,6 +16,8 @@ namespace ScriptorABC
     /// </summary>
     public partial class App : Application
     {
+        private ILog _logger;
+
         public static IServiceProvider ServiceProvider { get; private set; }
 
         /// <summary>
@@ -25,20 +29,26 @@ namespace ScriptorABC
             this.InitializeComponent();
 
             var services = new ServiceCollection();
-            new DependencyInjectionModule().RegisterServices(services);
+            DependencyInjectionModule.RegisterServices(services);
             ServiceProvider = services.BuildServiceProvider();
+
+            _logger = LogManager.GetLogger(typeof(Program));
+            services.AddSingleton(_logger);
+            _logger.Info("Starting App");
 
             Current.UnhandledException += OnUnhandledException;
         }
 
         private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
+            _logger.Error("Unhandled exception occurred.", e.Exception);
             LogManager.Shutdown(); // Flush and shutdown log
         }
 
         // Handle window closure to flush and shutdown log4net
         private void OnWindowClosed(object sender, Microsoft.UI.Xaml.WindowEventArgs e)
         {
+            _logger.Info("App window was closed.");
             LogManager.Shutdown();  // Flush logs and shut down log4net
         }
 
@@ -54,6 +64,8 @@ namespace ScriptorABC
             m_window.Closed += OnWindowClosed;
 
             m_window.Activate();
+
+            _logger.Info("App window launched.");
         }
 
         private Window m_window;

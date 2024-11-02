@@ -1,6 +1,5 @@
 ﻿using log4net;
 using ScriptorABC.Models;
-using System;
 using System.IO;
 using System.Reflection;
 

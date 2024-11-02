@@ -11,21 +11,16 @@ namespace ScriptorABC.Services
     public interface IVoiceRecorder
     {
         bool IsReady { get; }
-        Task<Result<bool>> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium);
+        Task<Result<bool>> StartRecording(string location, string fodlerName, AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium);
         Task<Result<string>> StopRecording();
     }
 
-    public class VoiceRecorder : IVoiceRecorder, IDisposable
+    public class VoiceRecorder(ILog logger) : IVoiceRecorder, IDisposable
     {
         private MediaCapture _mediaCapture;
         private StorageFolder _storageFolder;
         private string _fileName;
-        private readonly ILog _logger;
-
-        public VoiceRecorder(ILog logger)
-        {
-            _logger = logger;
-        }
+        private readonly ILog _logger = logger;
 
         private async Task InitializeMediaCaptureAsync()
         {
@@ -49,14 +44,16 @@ namespace ScriptorABC.Services
 
         public bool IsReady { get => _mediaCapture != null && _storageFolder != null; }
 
-        public async Task<Result<bool>> StartRecording(AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium)
+        public async Task<Result<bool>> StartRecording(string location, string folderName, AudioEncodingQuality encodingQuality = AudioEncodingQuality.Medium)
         {
             _logger.Info("Starting recording.");
 
             var result = new Result<bool>();
             try
             {
-                _storageFolder = await ApplicationData.Current.LocalFolder.CreateFolderAsync("Recordings", CreationCollisionOption.OpenIfExists);
+                //_storageFolder = await ApplicationData.Current.LocalFolder.CreateFolderAsync("Recordings", CreationCollisionOption.OpenIfExists);
+                _storageFolder = await (await StorageFolder.GetFolderFromPathAsync(location)).CreateFolderAsync(folderName, CreationCollisionOption.OpenIfExists);
+                
                 var file = await _storageFolder.CreateFileAsync($"{Guid.NewGuid().ToString()}.mp3", CreationCollisionOption.GenerateUniqueName);
                 _fileName = file.Name;
 
