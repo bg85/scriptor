@@ -2,11 +2,15 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformVersion>10.0.22621.0</TargetPlatformVersion>
+    <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\mic-icon.ico</ApplicationIcon>
+    <Platforms>AnyCPU;x86;ARM64;x64</Platforms>
+    <Configurations>Debug;Release;Release86;Release64;Release ARM</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,17 +19,24 @@
     <None Remove="Assets\recording.gif" />
     <None Remove="Assets\scriptor-api.txt" />
     <None Remove="Assets\scriptor-client.json" />
+    <None Remove="log4net.xml" />
     <None Remove="recording.gif" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="Assets\mic-icon.ico" />
+    <Content Include="log4net.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Google.Cloud.Logging.Log4Net" Version="4.4.0" />
     <PackageReference Include="Google.Cloud.Logging.V2" Version="4.4.0" />
+    <PackageReference Include="log4net" Version="3.0.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.1.6" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.1" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="OpenAI" Version="2.0.0" />
     <PackageReference Include="Polly" Version="8.4.2" />
@@ -36,7 +47,9 @@
     <Resource Include="Assets\load-8510.gif" />
     <Resource Include="Assets\recording.gif" />
     <EmbeddedResource Include="Assets\scriptor-api.txt" />
-    <EmbeddedResource Include="Assets\scriptor-client.json" />
+    <Content Include="Assets\scriptor-client.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Resource Include="recording.gif" />
   </ItemGroup>
 

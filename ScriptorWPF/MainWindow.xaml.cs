@@ -44,14 +44,14 @@ namespace ScriptorWPF
             });
             _janitorThread.Start();
 
-            //_subscriptionThread = new Thread(async () =>
-            //{
-            //    _isRequestingSubscriptionInfo = true;
-            //    var result = await _clerk.IsSubscriptionActive();
-            //    _isSubscriptionActive = result.Success && result.Value;
-            //    _isRequestingSubscriptionInfo = false;
-            //});
-            //_subscriptionThread.Start();
+            _subscriptionThread = new Thread(async () =>
+            {
+                _isRequestingSubscriptionInfo = true;
+                var result = await _clerk.IsSubscriptionActive();
+                _isSubscriptionActive = result.Success && result.Value;
+                _isRequestingSubscriptionInfo = false;
+            });
+            _subscriptionThread.Start();
             _isSubscriptionActive = true;
 
             this.Closed += MainWindow_Closed;
@@ -59,7 +59,7 @@ namespace ScriptorWPF
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
             _janitorThread?.Join();
-            //_subscriptionThread.Join();
+            _subscriptionThread.Join();
 
             _logger.Info("App window was closed.");
             LogManager.Shutdown();  // Flush logs and shut down log4net
@@ -194,8 +194,8 @@ namespace ScriptorWPF
                 {
                     SubscriptionTeachingTip.IsEnabled = true;
                     _isSubscriptionActive = true;
-                    //SubscriptionTeachingTip.Title = "Subscription Active";
-                    //SubscriptionTeachingTip.Subtitle = "Your subscription has been activated. THANK YOU!";
+                    SubscriptionTitle.Text = "Subscription Active";
+                    SubscriptionSubTitle.Text = "Your subscription has been activated. THANK YOU!";
                     //SubscriptionTeachingTip.ActionButtonContent = null;
                     MicrophoneButton.IsEnabled = true;
                     _logger.Info("Subscription purchased.");
@@ -220,8 +220,8 @@ namespace ScriptorWPF
             _logger.Error($"Error purchasing subscription. {(ex != null ? ex.Message : string.Empty)}");
             SubscriptionTeachingTip.IsEnabled = true;
             _isSubscriptionActive = false;
-            //SubscriptionTeachingTip.Title = "Error purchasing subscription";
-            //SubscriptionTeachingTip.Subtitle = "We are unable to purchase a subscription. Please try again later or contact us at scriptorabc@gmail.com";
+            SubscriptionTitle.Text = "Error purchasing subscription";
+            SubscriptionSubTitle.Text = "We are unable to purchase a subscription. Please try again later or contact us at scriptorabc@gmail.com";
             //SubscriptionTeachingTip.ActionButtonContent = null;
         }
 

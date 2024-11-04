@@ -37,12 +37,12 @@
             </StackPanel>
         </Border>
         <TextBlock x:Name="RecordingInfoBar" Text="Press the button and start talking. We'll do the rest." HorizontalAlignment="Center" VerticalAlignment="Top" Foreground="RoyalBlue" Grid.Row="1" FontSize="14"/>
-        <Border x:Name="SubscriptionTeachingTip" Background="White" BorderBrush="Black" BorderThickness="1" Padding="10" Visibility="Collapsed">
+        <Border x:Name="SubscriptionTeachingTip" Background="White" BorderBrush="Black" BorderThickness="1" Padding="10" Visibility="Collapsed" Margin="0,0,0,-1" Grid.RowSpan="2">
             <StackPanel>
-                <TextBlock Text="Sorry, your subscription has expired." FontWeight="Bold"/>
-                <TextBlock Text="Please consider extending it one more month."/>
-                <Button Content="Purchase License" Click="SubscriptionTeachingTip_ActionButtonClick"/>
-                <Button Content="Exit Application" Click="SubscriptionTeachingTip_CloseButtonClick"/>
+                <TextBlock x:Name="SubscriptionTitle" Text="Sorry, your subscription has expired." FontWeight="Bold" Foreground="DarkBlue" Margin="0,5,0,0"/>
+                <TextBlock x:Name="SubscriptionSubTitle" Text="Please consider extending it one more month." Foreground="DarkBlue" Margin="0,5,0,0"/>
+                <Button Content="Purchase License" Click="SubscriptionTeachingTip_ActionButtonClick" Foreground="DarkBlue" Margin="0,15,0,0"/>
+                <Button Content="Exit Application" Click="SubscriptionTeachingTip_CloseButtonClick" Foreground="DarkBlue" Margin="0,10,0,0"/>
             </StackPanel>
         </Border>
     </Grid>

@@ -2,7 +2,7 @@
 {
     public class Result<T>
     {
-        public Result()
+        public Result() 
         {
             Value = default!;
             Success = true;
