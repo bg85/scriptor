@@ -96,7 +96,7 @@ namespace ScriptorWPF.Services
                         purchaseResult.Value = false;
                         purchaseResult.Success = false;
                         purchaseResult.Message = "The purchase did not complete. The customer may have cancelled the purchase. ExtendedError: " + extendedError;
-                        _logger.Error(purchaseResult.Message);
+                        _logger.Warn(purchaseResult.Message);
                         break;
                     case StorePurchaseStatus.ServerError:
                     case StorePurchaseStatus.NetworkError:
@@ -109,7 +109,7 @@ namespace ScriptorWPF.Services
                         purchaseResult.Value = true;
                         purchaseResult.Success = false;
                         purchaseResult.Message = "The customer already owns this subscription. ExtendedError: " + extendedError;
-                        _logger.Error(purchaseResult.Message);
+                        _logger.Info(purchaseResult.Message);
                         break;
                 }
             });

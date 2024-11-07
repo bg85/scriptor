@@ -26,7 +26,7 @@ namespace ScriptorWPF.Services
             }
             catch (Exception ex)
             {
-                _logger.Error("Exception deleting old files.", ex);
+                _logger.Warn("Exception deleting old files.", ex);
             }
         }
     }
